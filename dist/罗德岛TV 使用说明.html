@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>罗德岛TV (RhodesTV) · 使用说明书</title>
+<style>
+:root{--bg:#0b0f14;--card:#141b24;--line:#22303f;--fg:#e8eef5;--dim:#93a2b3;--acc:#1e88e5;--ok:#2ecc71;--warn:#f5a623}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0b0f14,#0e141c 40%,#0b0f14);color:var(--fg);font:16px/1.75 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:30px;margin:0 0 6px}
+.sub{color:var(--dim);margin-bottom:26px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:16px 0}
+.card h2{margin:0 0 12px;font-size:20px;display:flex;align-items:center;gap:10px}
+.badge{display:inline-block;font-size:12px;padding:2px 9px;border-radius:20px;background:#1e88e5;color:#fff;vertical-align:middle}
+.badge.g{background:#2ecc71;color:#06210f}.badge.w{background:#f5a623;color:#3a2400}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:15px}
+th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+th{background:#18212c;color:#bcd;font-weight:600;white-space:nowrap}
+code{background:#0a1017;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-family:Consolas,Menlo,monospace;font-size:14px;color:#8fd0ff}
+pre{background:#0a1017;border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;font-size:14px}
+pre code{border:0;background:none;padding:0;color:#cfe6ff}
+ol,ul{padding-left:22px}li{margin:6px 0}
+.k{color:var(--acc);font-weight:600}
+ol>li{margin:10px 0}
+.tip{border-left:3px solid var(--acc);background:#101a26;padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+.warn{border-left:3px solid var(--warn);background:#241c0e;padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.mini{background:#101821;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.mini b{display:block;color:var(--acc);margin-bottom:4px}
+footer{color:var(--dim);font-size:13px;text-align:center;margin-top:30px}
+</style></head><body><div class="wrap">
+
+<h1>📺 罗德岛TV (RhodesTV) · 使用说明</h1>
+<div class="sub">自己写的安卓电视直播 App —— 多线路自动切换 · 节目单 · 手机/云端自动维护源</div>
+
+<div class="card">
+<h2>一、这是什么</h2>
+<p>一套<b>完全自研</b>的电视直播方案，装在你爷爷那台小米电视上。目标只有一个：<b>打开就能看，卡了就自己换线路，源失效了自动淘汰。</b></p>
+<div class="grid">
+<div class="mini"><b>App 自己写的</b>包名 com.rhodes.tv，基于 Media3(ExoPlayer)，不是第三方聚合软件</div>
+<div class="mini"><b>多线路自动切换</b>同一个频道有多条线路，起播失败/卡住 <b>自动换下一条</b>，不用手动</div>
+<div class="mini"><b>源自动维护</b>GitHub Actions 每 6 小时跑一次，把挂掉的源全部剔除，只留能播的</div>
+<div class="mini"><b>速度优先</b>实测每个流能不能真的拉出数据，仅保留实测可播的频道</div>
+</div>
+</div>
+
+<div class="card">
+<h2>二、安装 <span class="badge">3 分钟</span></h2>
+<p>APK 位置：<code>C:\Users\cjlst\Desktop\罗德岛TV_RhodesTV.apk</code>（4.88 MB，包名 <code>com.rhodes.tv</code>）</p>
+
+<h3>方式 A：ADB 安装（<b>推荐</b>，最不会报"违规"）</h3>
+<ol>
+<li>电视上开启开发者模式：<span class="k">设置 → 关于 → 连续点"版本号"7 次</span></li>
+<li>设置 → 账号与安全 → <span class="k">允许安装未知来源应用</span>；开启 <span class="k">ADB 调试</span></li>
+<li>电视上查看 IP：设置 → 网络 → 有线/无线 → 记下 IP（如 192.168.1.50）</li>
+<li>电脑上执行（USB 线与电视相连也可，用 <code>adb devices</code> 确认）：
+<pre><code>adb connect 192.168.1.50:5555
+adb install -r "C:\Users\cjlst\Desktop\罗德岛TV_RhodesTV.apk"</code></pre></li>
+</ol>
+<div class="tip">ADB 安装走的是系统安装通道，<b>基本不会</b>触发澎湃OS/HyperOS 的"违规应用"拦截。装完在电视桌面"应用"里就能看到 <b>罗德岛TV</b>。</div>
+
+<h3>方式 B：U 盘安装</h3>
+<ol>
+<li>把 APK 拷进 U 盘 → 插电视 → 用"高清播放器"或"文件管理"打开安装</li>
+<li>若弹"<b>此应用存在风险/违规</b>"：进 <span class="k">设置 → 应用设置 → 应用管理 → 找到该安装包/罗德岛TV → 允许</span>；或 <span class="k">设置 → 隐私 → 特殊权限 → 安装未知应用</span> 里放行</li>
+<li>澎湃OS 还会在 <span class="k">设置 → 账号与安全 → 安全中心 → 应用安装</span> 多一道确认，选"<b>仍然安装</b>"</li>
+</ol>
+<div class="warn">小米电视有时会"静默卸载"被判定为违规的应用。<b>如果装完反复消失，一律改用方式 A（ADB）</b>，或把安装包重命名再装。</div>
+
+<h3>方式 C：当贝市场/远程推送</h3>
+<p>手机装"当贝市场"→ 与电视同 WiFi → 用"远程安装"把 APK 推过去。同样可能遇到上面那道拦截。</p>
+</div>
+
+<div class="card">
+<h2>三、第一次使用：把直播源地址填进去</h2>
+<p>App 自身不带任何源，地址由你控制（这样源失效时你自己就能换）。</p>
+<ol>
+<li>电视上打开 <b>罗德岛TV</b> → 按遥控器 <span class="k">菜单键</span> → 进入 <b>设置</b></li>
+<li>在"<b>订阅地址</b>"里粘贴你的 m3u 地址（每行一个），例如：
+<pre><code>https://gitee.com/你的用户名/RhodesTV-sources/raw/master/dist/playable.m3u</code></pre></li>
+<li>"<b>节目单 EPG</b>"里粘贴（可选）：
+<pre><code>https://gitee.com/你的用户名/RhodesTV-sources/raw/master/dist/epg.xml.gz</code></pre></li>
+<li>点 <b>保存并刷新</b> → 显示"刷新成功：共 N 个频道"就完成了</li>
+</ol>
+<div class="tip">电视上打字很累？用 <b>局域网配置页</b>（见第五节），手机上填完保存，电视那边自动生效。</div>
+</div>
+
+<div class="card">
+<h2>四、日常使用 · 遥控器按键</h2>
+<table>
+<tr><th>遥控器按键</th><th>全屏看的时候</th><th>频道面板打开时</th></tr>
+<tr><td><span class="k">返回</span></td><td>弹出频道面板</td><td>收起面板（回到全屏）</td></tr>
+<tr><td><span class="k">上 / 下</span></td><td>弹出频道面板</td><td>在列表中移动光标</td></tr>
+<tr><td><span class="k">左 / 右</span></td><td>弹出频道面板</td><td><b>切换该频道的线路</b>（卡了就按）</td></tr>
+<tr><td><span class="k">确定 OK</span></td><td>弹出频道面板</td><td>播放选中的频道</td></tr>
+<tr><td><span class="k">长按 OK</span> <span class="badge g">新</span></td><td colspan="2"><b>收藏 / 取消收藏</b>当前频道（频道名后出现 ⭐，屏幕提示「已收藏 xxx」）</td></tr>
+<tr><td><span class="k">频道 +/−</span></td><td>直接上/下一个频道</td><td>同上</td></tr>
+<tr><td><span class="k">数字键</span></td><td>输数字直接跳台（如按 <code>1</code><code>2</code> = 第 12 个频道，1.5 秒内输完）</td><td>同上</td></tr>
+<tr><td><span class="k">菜单 MENU</span></td><td colspan="2">打开设置</td></tr>
+<tr><td><span class="k">信息 INFO</span></td><td colspan="2">显示/隐藏频道面板</td></tr>
+</table>
+<p><b>面板会 25 秒无操作自动隐藏</b>，不会一直挡着画面。</p>
+<div class="tip"><b>卡住了怎么办？</b>什么都不用做——App 检测到起播失败会<b>自动换下一条线路</b>。想手动换，面板打开时按 <span class="k">左/右</span>。</div>
+</div>
+
+<div class="card">
+<h2>五、收藏与分组 <span class="badge g">v1.1 新增</span></h2>
+<h3>收藏频道</h3>
+<ol>
+<li>打开频道面板，光标停在想收藏的频道上</li>
+<li><b>长按「确定 OK」约 1 秒</b> → 频道名后出现 <b>⭐</b>，屏幕提示「已收藏 XXX」；再长按一次即取消收藏</li>
+<li>频道栏最前面会出现置顶分组 <b>⭐ 收藏</b>；一个都没收藏时这个分组自动隐藏</li>
+</ol>
+<div class="tip">收藏按<b>频道名</b>记录，所以直播源更新、换线路之后收藏依然有效，不会失效。</div>
+<h3>分组排序 / 隐藏</h3>
+<ol>
+<li>电视上进入 <b>设置</b> → <b>分组管理</b></li>
+<li><b>上 / 下键</b>：把当前分组整体上移 / 下移（决定频道栏里分组的先后顺序，⭐ 收藏永远在最前）</li>
+<li><b>确定 OK</b>：切换该分组的 <b>显示 / 隐藏</b>（隐藏的分组不在频道栏出现，适合把用不上的分组收起来）</li>
+<li>按 <b>返回</b> 自动保存，主界面立刻生效</li>
+</ol>
+<div class="tip">兜底：如果所有分组都被隐藏了，App 会自动至少显示收藏分组或全部频道，不会白屏。</div>
+</div>
+
+<div class="card">
+<h2>六、手机维护（三种方式，任选）</h2>
+
+<h3>方式 1：电视内置的局域网配置页 <span class="badge g">最方便</span></h3>
+<ol>
+<li>电视上打开 <b>设置</b> 页面（会同时启动一个内置小服务器）</li>
+<li>屏幕上方会显示一个地址，形如 <code>http://192.168.1.50:8765/</code></li>
+<li>手机连同一个 WiFi，浏览器打开这个地址</li>
+<li>在网页里增删订阅地址、强制立即更新、查看当前状态</li>
+</ol>
+<div class="tip">完全本地、不需要账号，也<b>不需要能上外网</b>，最稳。</div>
+
+<h3>方式 3：手机直连电视 <span class="badge">v1.1 新增 · 为手机 App 铺路</span></h3>
+<p>电视端现在自带一套<b>只读+可改</b>的 JSON 接口，手机连同一个 WiFi 即可直接查询和操作。</p>
+<table>
+<tr><th>接口</th><th>作用</th></tr>
+<tr><td><code>GET /api/status</code></td><td>电视当前状态：正在播什么频道/分组/第几条线路、频道总数、收藏数、上次刷新时间、版本号</td></tr>
+<tr><td><code>GET /api/channels?limit=50&offset=0</code></td><td>频道列表（可分页、可按 <code>group=</code> 过滤）</td></tr>
+<tr><td><code>GET /api/groups</code></td><td>分组列表（含顺序与隐藏状态）</td></tr>
+<tr><td><code>GET /api/fav</code> · <code>POST /api/fav</code></td><td>查看收藏；<code>name=频道名&amp;action=add|remove|toggle</code> 增删收藏（立即写回电视）</td></tr>
+<tr><td><code>POST /api/group</code></td><td><code>order=A,B,C</code> 设分组顺序；<code>hidden=A,B</code> 设隐藏分组；<code>toggle=分组名</code> 单个切换</td></tr>
+<tr><td><code>POST /api/refresh</code></td><td>让电视立即重新抓取并测速更新直播源</td></tr>
+</table>
+<p><b>自动发现</b>：电视每 3 秒向 <b>UDP 8766</b> 端口广播一次身份包；手机也可以主动往 8766 发一行 <code>RHODESTV?</code>，电视会立刻单播回复同一份 JSON（含 IP、端口、当前频道、频道数、收藏数）。</p>
+<div class="tip">电视上的 <b>设置</b> 页面顶部会同时显示这两个端口：<code>http://电视IP:8765/</code>（网页/接口）和发现端口 <code>8766</code>。</div>
+
+<h3>方式 2：云端自动刷新（GitHub Actions + Gitee）</h3>
+<p>把源仓库 <code>RhodesTV-sources</code> 放到 Gitee（国内电视拉取快），同时用 GitHub Actions 免费跑测源。</p>
+<table>
+<tr><th>步骤</th><th>做什么</th></tr>
+<tr><td>1</td><td>Gitee 新建公开仓库 <code>RhodesTV-sources</code>，把 <code>temp/rhodes_tv/repo/</code> 里的文件推上去</td></tr>
+<tr><td>2</td><td>GitHub 上同样建一个仓库并推送（或用镜像同步）</td></tr>
+<tr><td>3</td><td>GitHub → Settings → Actions → Workflow permissions 改成 <b>Read and write</b></td></tr>
+<tr><td>4</td><td>GitHub → Settings → Secrets → 新增 <code>GITEE_TOKEN</code>（Gitee 私人令牌）和 <code>GITEE_REPO</code>（如 <code>你的名字/RhodesTV-sources</code>）</td></tr>
+<tr><td>5</td><td>手机打开 Actions 页面 → <b>Run workflow</b> → 3~5 分钟后，电视下次启动就是新源</td></tr>
+</table>
+<p>自动任务每 <b>6 小时</b>跑一次：抓取 → 并发实测 → 剔除挂掉的 → 生成 <code>dist/playable.m3u</code> 和 <code>dist/epg.xml.gz</code>。<br>
+安全阀：<b>可用频道少于 20 个就不推送</b>，避免把可用源覆盖成空表。</p>
+</div>
+
+<div class="card">
+<h2>七、应用内一键更新 <span class="badge g">v1.2 新增</span></h2>
+<h3>电视上怎么更新（不用再插U盘 / 不用 adb）</h3>
+<ol>
+<li>按 <code>Menu</code> → 进入<b>设置</b> → 顶部显示当前版本，如 <code>v1.2 (versionCode 3)</code></li>
+<li>点 <b>「检查更新」</b>：App 会自动依次尝试 3 个镜像（jsDelivr → githack → GitHub 原生），
+读取云端的 <code>update.json</code> 与本机版本对比，几秒内给出结果</li>
+<li>提示有新版本时点 <b>「下载并安装」</b>：下载带进度条，完成后会<b>校验 SHA-256</b>（防下载损坏或被劫持），
+校验通过才拉起系统安装器；点「安装」即可覆盖升级，<b>频道 / 收藏 / 设置全部保留</b></li>
+<li>首次安装会弹「是否允许安装未知应用」，选<b>允许</b>（只针对本应用，一次即可）</li>
+</ol>
+<p><b>自动检查：</b>默认<b>开</b> —— 每次启动若距上次检查超过 6 小时就静默查一次，有新版本才弹提示；可在设置页关闭。</p>
+<p><b>更新源：</b>内置 3 个镜像自动回退，电视端无需翻墙（jsDelivr 国内可直连）。想换成自己的服务器，
+在设置页「更新源」填你自己的 <code>update.json</code> 地址即可。</p>
+
+<h3>手机上随时看有没有新版</h3>
+<p>手机浏览器打开 <code>http://电视IP:8765/api/update</code>，返回例如：</p>
+<pre><code>{"currentCode":3,"hasUpdate":false,"latest":3,"apkUrl":"https://cdn.jsdelivr.net/..."}</code></pre>
+<p>不用走到电视前，就知道家里那台电视是不是最新版。</p>
+
+<h3>你（维护者）以后怎么发新版</h3>
+<pre><code>1) 改 app/build.gradle.kts 里的 versionCode / versionName（versionCode 必须 +1）
+2) ..\gradle-8.7\bin\gradle.bat :app:assembleRelease
+3) 用新 APK 覆盖 dist\RhodesTV.apk
+4) 算出新 APK 的 SHA-256，更新 dist\update.json 的 versionCode / versionName / sha256
+5) 提交并 push 到 GitHub（仓库：https://github.com/na1ve7/RhodesTV）
+   —— 所有已装的电视 App 点「检查更新」即可一键升级</code></pre>
+<p><b>注意：</b>签名文件必须始终是同一个 <code>app\rhodes.keystore</code>，否则新包无法覆盖安装（签名冲突）。
+该密钥<b>没有上传</b>公开仓库（仓库里的签名配置改成读环境变量），所以公开仓库别人克隆后也能编译，但只会打出调试签名。</p>
+
+<h2>八、常见问题</h2>
+<table>
+<tr><th>现象</th><th>原因 / 处理</th></tr>
+<tr><td>所有线路都失败</td><td>订阅地址 404 或内容是空的。手机浏览器直接打开那个 m3u 地址看看有没有内容</td></tr>
+<tr><td>某个频道黑屏</td><td>App 会自动切到这个频道的下一条线路；全部线路都挂 = 该源失效，等下次自动刷新</td></tr>
+<tr><td><b>电视经常报"网络无连接/网关错误"</b></td><td><b>你家的老问题：路由器 DNS 被污染。</b>把路由器 DHCP 的 DNS 改成 <code>223.5.5.5</code> / <code>119.29.29.29</code>，或在电视网络设置里手动填 DNS</td></tr>
+<tr><td>能看 IPTV 但第三方源全挂</td><td>同上，运营商按域名阻断。改 DNS 后仍不通的域名，只能走代理或换源</td></tr>
+<tr><td>节目单不显示</td><td>检查 EPG 地址是否可访问；XMLTV 里的 channel id 要和源里的 <code>tvg-id</code> 对得上</td></tr>
+<tr><td>装完就消失</td><td>澎湃OS 的安全策略，改用 ADB 安装（第二节方式 A）</td></tr>
+<tr><td>想换源</td><td>用第五节的局域网配置页，手机上改完保存即生效</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h2>九、文件都在哪</h2>
+<table>
+<tr><th>路径</th><th>说明</th></tr>
+<tr><td><code>C:\Users\cjlst\Desktop\罗德岛TV_RhodesTV.apk</code></td><td>装到电视上的安装包（已签名）</td></tr>
+<tr><td><code>...\temp\rhodes_tv\RhodesTV\</code></td><td>App 完整源码（Kotlin / Gradle 工程）</td></tr>
+<tr><td><code>...\temp\rhodes_tv\repo\</code></td><td>源仓库（Actions 工作流 + 测源脚本 + 部署文档）</td></tr>
+<tr><td><code>...\temp\rhodes_tv\tools\</code></td><td>本地也能跑的测源 / EPG 生成脚本</td></tr>
+<tr><td><code>...\temp\rhodes_tv\dist\</code></td><td>发布产物：<code>update.json</code>（OTA 清单）+ <code>RhodesTV.apk</code>（已推送 GitHub）</td></tr>
+<tr><td><code>https://github.com/na1ve7/RhodesTV</code></td><td>公开仓库：App 源码 + dist 发布目录（OTA 更新就靠它）</td></tr>
+<tr><td><code>...\temp\rhodes_tv\RhodesTV\app\rhodes.keystore</code></td><td>签名文件（密码 rhodes12345，别名 rhodes）· 重装需同一个，请勿丢</td></tr>
+</table>
+<p><b>想改代码重新打包：</b></p>
+<pre><code>cd ...\temp\rhodes_tv\RhodesTV
+..\gradle-8.7\bin\gradle.bat assembleRelease
+# 产物：app\build\outputs\apk\release\app-release.apk</code></pre>
+</div>
+
+<footer>罗德岛TV (RhodesTV) · 自研版 · v1.2 · 生成于 2026-09-11</footer>
+</div></body></html>
