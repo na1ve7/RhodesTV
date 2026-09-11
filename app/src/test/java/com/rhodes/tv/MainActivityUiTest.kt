@@ -37,11 +37,18 @@ class MainActivityUiTest {
         val ctx = RuntimeEnvironment.getApplication()
         Prefs.get(ctx).edit().clear().commit()
 
-        // ---- 本地 m3u 真源: 60 个频道, 3 个分组 ----
+        // ---- 本地 m3u 真源: 60 个频道 ----
+        // 频道名带真实特征（用于验证「按名称重分类」），上游 group-title 故意写成乱的，且每 2 个频道一组
         val sb = StringBuilder("#EXTM3U\n")
         for (i in 1..60) {
-            val g = if (i <= 20) "新闻" else if (i <= 40) "央视" else "地方"
-            sb.append("#EXTINF:-1 tvg-id=\"c$i\" group-title=\"$g\",频道$i\n")
+            val name = when {
+                i == 1 -> "频道1"          // 无特征名 → 其他频道
+                i <= 20 -> "CCTV$i 央视频道$i"   // → 央视频道
+                i <= 40 -> "湖南卫视$i"          // → 卫视频道
+                else -> "辽宁频道$i"              // → 地方频道
+            }
+            val g = if (i % 2 == 0) "上游乱组A" else "上游乱组B"
+            sb.append("#EXTINF:-1 tvg-id=\"c$i\" group-title=\"$g\",$name\n")
             sb.append("http://127.0.0.1:1/$i.m3u8\n")
         }
         // ---- 迷你 HTTP 服务器(ServerSocket 手写, 不依赖 com.sun) ----
@@ -89,7 +96,12 @@ class MainActivityUiTest {
         }
         probe("channels_loaded", count == 60, "list.adapter.count=" + count + " (expect 60)")
         val navCount = nav.adapter?.count ?: 0
-        probe("groups_loaded", navCount >= 4, "navList.adapter.count=" + navCount + " (全部+3组+设置=5)")
+        probe("groups_loaded", navCount == 6, "navList.adapter.count=" + navCount + " (全部+央视频道+卫视频道+地方频道+其他频道+设置)")
+
+        val navTexts = (0 until (nav.adapter?.count ?: 0))
+            .map { i -> nav.adapter?.getView(i, null, nav)?.findViewById<TextView>(R.id.tvNavName)?.text?.toString() ?: "" }
+        probe("reclassified_groups", listOf("央视频道", "卫视频道", "地方频道", "其他频道").all { navTexts.contains(it) },
+            "nav=" + navTexts)
 
         // ---- 长按 OK = 收藏 ----
         val lcl = list.onItemLongClickListener
@@ -100,7 +112,7 @@ class MainActivityUiTest {
         val navCount2 = nav.adapter?.count ?: 0
         val firstRow = nav.adapter?.getView(1, null, nav)
         val navName1 = firstRow?.findViewById<TextView>(R.id.tvNavName)?.text?.toString() ?: ""
-        probe("fav_group_pinned", navCount2 >= 5 && navName1.contains("收藏"),
+        probe("fav_group_pinned", navCount2 == 7 && navName1.contains("收藏"),
             "navCount=" + navCount2 + " nav[1]='" + navName1 + "'")
 
         // 再长按一次 = 取消收藏

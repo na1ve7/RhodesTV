@@ -1,12 +1,12 @@
 {
-  "versionCode": 7,
-  "versionName": "1.6",
+  "versionCode": 8,
+  "versionName": "1.7",
   "apkUrl": "https://gh-proxy.com/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
   "mirrors": [
     "https://ghfast.top/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
     "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV@main/dist/RhodesTV.apk"
   ],
-  "sha256": "fef5e853ded78f840a3c0277885bc6b07e862869e5f83b28546cbe18069c7916",
-  "size": 5172060,
-  "note": "v1.6 全新双栏UI：纯视频背景 + 左侧导航栏 + 悬浮频道卡（呼出时画面半透明压暗），菜单键短按呼出/收起（左滑入动画）、长按打开设置，频道号数字方块，底部按键提示条，数字键缓冲跳台；移除播放时左上角频道名大字与右下角EPG；修复跳台后数字键残留旧值与菜单压暗层不显示。"
+  "sha256": "d8cb88f8bf596b0ce1c9806194df60c18213f91d88468c4dfebca06d3cd07b27",
+  "size": 5187486,
+  "note": "v1.7 分组与换源大修：① 分组重分类——不再照抄上游混乱的 group-title，按频道名自动归入 12 个稳定大类（央视频道/卫视频道/地方频道/影视综艺/纪录人文/少儿动画/音乐戏曲/体育频道/新闻财经/港澳台频道/国际频道/其他频道），导航顺序固定；② 同频道多线路合并——CCTV1综合 / CCTV-1 综合 / CCTV1 综合高清 自动合成一个频道的多条线路，面板打开时按 左/右 手动切线路并记住你选过的那条；③ 卡住自动换源——起播超时或播放出错自动切下一条线路，失败过的坏线路会降权，全部线路失败自动重试一轮；④ 界面按大屏重新定比例与字号（频道名 24sp / 节目名 18sp / 分组名 24sp）；⑤ 修复分组归类表未生效、同频道重复 url 线路未去重两个 bug。"
 }

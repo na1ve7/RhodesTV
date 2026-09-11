@@ -2,10 +2,10 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="8dp"
-    android:layout_marginEnd="8dp"
-    android:layout_marginTop="2dp"
-    android:layout_marginBottom="2dp"
+    android:layout_marginStart="12dp"
+    android:layout_marginEnd="12dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginBottom="4dp"
     android:background="@drawable/sel_nav">
 
     <View
@@ -18,7 +18,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="46dp"
+        android:minHeight="72dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="12dp"
@@ -32,7 +32,7 @@
             android:maxLines="1"
             android:ellipsize="end"
             android:textColor="@color/nav_fg"
-            android:textSize="20sp" />
+            android:textSize="24sp" />
 
         <TextView
             android:id="@+id/tvNavArrow"
@@ -40,7 +40,7 @@
             android:layout_height="wrap_content"
             android:text="›"
             android:textColor="@color/fg"
-            android:textSize="20sp"
+            android:textSize="26sp"
             android:visibility="invisible" />
     </LinearLayout>
 </FrameLayout>

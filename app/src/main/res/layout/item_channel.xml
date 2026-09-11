@@ -2,30 +2,31 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:minHeight="60dp"
+    android:minHeight="96dp"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:paddingStart="10dp"
-    android:paddingEnd="10dp"
-    android:paddingTop="6dp"
-    android:paddingBottom="6dp">
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp">
 
     <TextView
         android:id="@+id/tvNo"
-        android:layout_width="44dp"
-        android:layout_height="38dp"
-        android:background="@drawable/bg_num"
+        android:layout_width="56dp"
+        android:layout_height="52dp"
+        android:background="@drawable/sel_num"
+        android:duplicateParentState="true"
         android:gravity="center"
         android:includeFontPadding="false"
         android:textColor="@color/fg"
-        android:textSize="20sp"
+        android:textSize="26sp"
         android:textStyle="bold" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="16dp"
         android:orientation="vertical">
 
         <TextView
@@ -45,6 +46,6 @@
             android:maxLines="1"
             android:ellipsize="end"
             android:textColor="@color/dim"
-            android:textSize="15sp" />
+            android:textSize="18sp" />
     </LinearLayout>
 </LinearLayout>

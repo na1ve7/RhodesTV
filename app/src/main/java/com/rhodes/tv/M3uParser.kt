@@ -17,11 +17,15 @@ object M3uParser {
             if (line.startsWith("#EXTINF")) {
                 val attrs = HashMap<String, String>()
                 for (m in ATTR.findAll(line)) attrs[m.groupValues[1].lowercase()] = m.groupValues[2]
-                val name = line.substringAfterLast(',', "").trim()
+                val rawName = line.substringAfterLast(',', "").trim()
                     .ifEmpty { attrs["tvg-name"] ?: "未知频道" }
-                val group = attrs["group-title"]?.takeIf { it.isNotBlank() } ?: "其他"
+                // 去掉「高清/HD/线路N」等后缀，避免同一频道因写法不同被拆成好几个
+                val name = GroupRules.cleanName(rawName)
+                // 分组不再直接采用上游 group-title（多而杂乱、组内关系不大）：按名称规则重分类为 12 大类
+                val group = GroupRules.classify(name, attrs["group-title"] ?: "")
                 val tvgId = attrs["tvg-id"]?.takeIf { it.isNotBlank() }
-                val key = name + "|" + group
+                // key 用归一化频道名：同一频道的多条线路（不同画质/后缀）在此合并为一条多线路频道
+                val key = GroupRules.normName(rawName)
                 pending = out.getOrPut(key) {
                     Channel(key = key, name = name, group = group,
                         logo = attrs["tvg-logo"]?.takeIf { it.isNotBlank() }, tvgId = tvgId)
@@ -39,7 +43,8 @@ object M3uParser {
             } else if (line.startsWith("#")) {
                 // ignore other comments
             } else {
-                pending?.lines?.add(StreamLine(line, ua, ref))
+                // 同一频道内完全相同的 url 只保留一条（多线路去重，避免白等一次换源）
+                pending?.let { ch -> if (ch.lines.none { it.url == line }) ch.lines.add(StreamLine(line, ua, ref)) }
                 pending = null
             }
         }

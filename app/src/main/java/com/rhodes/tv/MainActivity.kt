@@ -133,6 +133,10 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
             tvHintBar.text = hintText()
             if (total > 1) showToast("线路 " + no + "/" + total)
         }
+        player.onRetry = { sec ->
+            tvHintBar.text = hintText()
+            showToast("全部线路都失败了，" + sec + " 秒后自动重试")
+        }
         player.onAllFailed = { msg ->
             tvHint.text = "当前频道所有线路都播不了（" + msg + "）\n请按「菜单」键呼出菜单，在左栏「设置」里换个源，或在手机上刷新直播源"
             statusBox.visibility = View.VISIBLE
@@ -219,7 +223,8 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         val order = Prefs.groupOrder(this)
         val ordered = ArrayList<String>()
         for (g in order) if (raw.contains(g)) ordered.add(g)
-        for (g in raw) if (!ordered.contains(g)) ordered.add(g)
+        // 用户没自定义过的分组 → 按内置固定顺序（央视频道…其他频道）排在后面，刷新后顺序稳定
+        for (g in raw.filter { !ordered.contains(it) }.sortedBy { GroupRules.orderOf(it) }) ordered.add(g)
 
         val names = ArrayList<String>()
         names.add("全部频道")
@@ -278,7 +283,8 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         curPos = pos
         val ch = shown[pos]
         curLine = 1
-        player.play(ch, 1)
+        // -1 = 走「线路记忆」：优先用该频道上次播放成功的线路，没有记忆则从第 1 条开始
+        player.play(ch, -1)
         Prefs.get(this).edit().putInt("last_ch", pos).apply()
         TvState.onPlay(ch, pos)
         tvHintBar.text = hintText()

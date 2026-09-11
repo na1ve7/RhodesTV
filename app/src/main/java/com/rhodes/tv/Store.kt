@@ -81,6 +81,43 @@ object Prefs {
         get(c).edit().putStringSet(KEY_GROUP_HIDDEN, s).apply()
         return hidden
     }
+
+    // ---------- 线路记忆 / 坏线路黑名单 ----------
+
+    const val KEY_LINE_MEM = "line_mem"
+    const val KEY_BAD_LINES = "bad_lines"
+
+    /** 坏线路记忆有效期：6 小时（之后重新给它机会） */
+    private const val BAD_TTL = 6 * 60 * 60 * 1000L
+
+    /** 该频道上次播放成功的线路下标；无记忆返回 -1 */
+    fun lineMem(c: Context, name: String): Int =
+        list(c, KEY_LINE_MEM).firstOrNull { it.startsWith(name + "\t") }
+            ?.substringAfter('\t')?.toIntOrNull() ?: -1
+
+    fun saveLineMem(c: Context, name: String, idx: Int) {
+        val cur = list(c, KEY_LINE_MEM).filter { !it.startsWith(name + "\t") }.toMutableList()
+        cur.add(0, name + "\t" + idx)
+        save(c, KEY_LINE_MEM, cur.take(300))
+    }
+
+    /** 当前仍被视为「坏」的线路 url 集合（过期自动清理） */
+    fun badLines(c: Context): MutableSet<String> {
+        val now = System.currentTimeMillis()
+        val rows = list(c, KEY_BAD_LINES)
+        val fresh = rows.filter { r -> now - (r.substringAfter('\t', "").toLongOrNull() ?: 0L) < BAD_TTL }
+        if (fresh.size != rows.size) save(c, KEY_BAD_LINES, fresh)
+        return fresh.map { it.substringBefore('\t') }.toHashSet()
+    }
+
+    fun markBad(c: Context, url: String) {
+        val cur = list(c, KEY_BAD_LINES).filter { !it.startsWith(url + "\t") }.toMutableList()
+        cur.add(0, url + "\t" + System.currentTimeMillis())
+        save(c, KEY_BAD_LINES, cur.take(200))
+    }
+
+    fun clearBad(c: Context, url: String) =
+        save(c, KEY_BAD_LINES, list(c, KEY_BAD_LINES).filter { !it.startsWith(url + "\t") })
 }
 
 object ChannelStore {

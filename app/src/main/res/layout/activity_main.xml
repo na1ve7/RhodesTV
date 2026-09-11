@@ -67,7 +67,7 @@
             android:layout_width="@dimen/card_width"
             android:layout_height="match_parent"
             android:layout_gravity="start"
-            android:layout_marginStart="170dp"
+            android:layout_marginStart="154dp"
             android:layout_marginTop="@dimen/menu_margin_v"
             android:layout_marginBottom="@dimen/menu_margin_v"
             android:elevation="12dp"
