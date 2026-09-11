@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:orientation="vertical"
+    android:padding="32dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="分组管理"
+        android:textColor="@color/fg"
+        android:textSize="34sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="左/右键 = 调整分组顺序    确认键(OK) = 显示/隐藏    返回键 = 保存并退出"
+        android:textColor="@color/accent"
+        android:textSize="20sp" />
+
+    <ListView
+        android:id="@+id/listGroups"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="14dp"
+        android:background="#FF151B24"
+        android:divider="#FF232C38"
+        android:dividerHeight="1dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:listSelector="@drawable/sel_item"
+        android:focusable="true"
+        android:focusableInTouchMode="true" />
+
+    <TextView
+        android:id="@+id/tvGroupTip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textColor="@color/dim"
+        android:textSize="19sp" />
+</LinearLayout>

@@ -1,0 +1,12 @@
+{
+  "versionCode": 3,
+  "versionName": "1.2",
+  "apkUrl": "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV@main/dist/RhodesTV.apk",
+  "mirrors": [
+    "https://raw.githack.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
+    "https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk"
+  ],
+  "sha256": "3f20277133601bbb941711a9b986e6e90c138807494627df0516ccceafd9d2e1",
+  "size": 5133421,
+  "note": "新增：设置页「一键远程更新」（自动检查新版本/下载/校验/安装）；修复播放器启动崩溃；收藏分组与数字键换台。"
+}

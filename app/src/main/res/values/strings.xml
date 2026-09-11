@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">罗德岛TV</string>
+    <string name="loading">正在加载频道…</string>
+</resources>
