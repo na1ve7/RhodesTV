@@ -191,7 +191,9 @@ object Updater {
         if (tmp.exists()) tmp.delete()
         // 主地址可能是被 CDN 缓存的旧包 → sha256 校验失败就换下一个镜像重试
         var lastErr: Exception? = null
-        val cands = (listOf(info.apkUrl) + urls(c).map { it.replace("update.json", "RhodesTV.apk") }).distinct()
+        val cands = (listOf(info.apkUrl) + urls(c).map { it.replace("update.json", "RhodesTV.apk") })
+            .filter { !it.contains("api.github.com") }   // Contents API 传大二进制会截断，不用它下包
+            .distinct()
         for (u in cands) {
             try {
                 if (tmp.exists()) tmp.delete()

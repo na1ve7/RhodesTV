@@ -1,12 +1,12 @@
 {
   "versionCode": 6,
   "versionName": "1.5",
-  "apkUrl": "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV@main/dist/RhodesTV.apk",
+  "apkUrl": "https://gh-proxy.com/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
   "mirrors": [
-    "https://gh-proxy.com/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
-    "https://ghfast.top/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk"
+    "https://ghfast.top/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
+    "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV@main/dist/RhodesTV.apk"
   ],
-  "sha256": "98f7d9ace6dae8f7ab090e68666480ea35626678eb4f4a7eb296013bf5ef29ae",
-  "size": 5164551,
+  "sha256": "90bcb20396b33ea07fc34f768c5256831852f84dfc0819a403b7a505555bb83f",
+  "size": 5164699,
   "note": "v1.5 修复“发了新版检测不到”：改用不做CDN缓存的 GitHub API 取清单/安装包，并自动把旧内置订阅升级为免缓存地址；更新失败时逐镜像 sha256 校验回退。"
 }
