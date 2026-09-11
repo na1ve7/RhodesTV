@@ -75,9 +75,9 @@ class MainActivityUiTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         val a = controller.get()
         val list = a.findViewById<ListView>(R.id.channelList)
-        val groupBar = a.findViewById<LinearLayout>(R.id.groupBar)
-        val foot = a.findViewById<TextView>(R.id.tvPanelFoot)
-        val panel = a.findViewById<View>(R.id.leftPanel)
+        val nav = a.findViewById<ListView>(R.id.navList)
+        val menuRoot = a.findViewById<View>(R.id.menuRoot)
+        val toast = a.findViewById<TextView>(R.id.tvToast)
 
         var count = 0
         for (k in 0 until 150) {
@@ -87,7 +87,8 @@ class MainActivityUiTest {
             Thread.sleep(200)
         }
         probe("channels_loaded", count == 60, "list.adapter.count=" + count + " (expect 60)")
-        probe("groups_loaded", groupBar.childCount >= 4, "groupBar.childCount=" + groupBar.childCount + " (全部+3组,无收藏=4)")
+        val navCount = nav.adapter?.count ?: 0
+        probe("groups_loaded", navCount >= 4, "navList.adapter.count=" + navCount + " (全部+3组+设置=5)")
 
         // ---- 长按 OK = 收藏 ----
         val lcl = list.onItemLongClickListener
@@ -95,8 +96,11 @@ class MainActivityUiTest {
         lcl?.onItemLongClick(list, list.getChildAt(0), 0, 0L)
         shadowOf(Looper.getMainLooper()).idle()
         probe("long_click_dpad_center_maps_toggleFav", Prefs.isFav(ctx, "频道1"), "Prefs.isFav(频道1)=" + Prefs.isFav(ctx, "频道1"))
-        probe("fav_group_pinned", groupBar.childCount >= 5 && (groupBar.getChildAt(1) as TextView).text.toString().contains("收藏"),
-            "child1='" + (groupBar.getChildAt(1) as TextView).text + "' childCount=" + groupBar.childCount)
+        val navCount2 = nav.adapter?.count ?: 0
+        val firstRow = nav.adapter?.getView(1, null, nav)
+        val navName1 = firstRow?.findViewById<TextView>(R.id.tvNavName)?.text?.toString() ?: ""
+        probe("fav_group_pinned", navCount2 >= 5 && navName1.contains("收藏"),
+            "navCount=" + navCount2 + " nav[1]='" + navName1 + "'")
 
         // 再长按一次 = 取消收藏
         lcl?.onItemLongClick(list, list.getChildAt(0), 0, 0L)
@@ -107,7 +111,7 @@ class MainActivityUiTest {
         a.onKeyDown(KeyEvent.KEYCODE_5, key(KeyEvent.KEYCODE_5))
         a.onKeyDown(KeyEvent.KEYCODE_0, key(KeyEvent.KEYCODE_0))
         shadowOf(Looper.getMainLooper()).idle()
-        probe("numkey_pending_prompt", foot.text.toString().contains("50"), "tvPanelFoot='" + foot.text + "'")
+        probe("numkey_pending_prompt", toast.text.toString().contains("50"), "tvToast='" + toast.text + "'")
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
         probe("numkey_50_jumped", list.selectedItemPosition == 49, "selectedItemPosition=" + list.selectedItemPosition + " (expect 49)")
 
@@ -116,19 +120,31 @@ class MainActivityUiTest {
         a.onKeyDown(KeyEvent.KEYCODE_9, key(KeyEvent.KEYCODE_9))
         a.onKeyDown(KeyEvent.KEYCODE_9, key(KeyEvent.KEYCODE_9))
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
-        probe("numkey_out_of_range_msg", foot.text.toString().contains("999"), "tvPanelFoot='" + foot.text + "'")
+        probe("numkey_out_of_range_msg", toast.text.toString().contains("999"), "tvToast='" + toast.text + "'")
 
-        // ---- 返回键切换面板 ----
+        // ---- 返回键收起菜单 ----
+        a.onKeyDown(KeyEvent.KEYCODE_BACK, key(KeyEvent.KEYCODE_BACK))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500))
+        probe("back_hides_panel", menuRoot.visibility == View.GONE || menuRoot.translationX < -1f,
+            "menuRoot.visibility=" + menuRoot.visibility + " translationX=" + menuRoot.translationX)
+        // 再按返回 -> 面板已收起, 交回系统(Activity 应进入 finish 流程, 这里只验证不崩溃)
         a.onKeyDown(KeyEvent.KEYCODE_BACK, key(KeyEvent.KEYCODE_BACK))
         shadowOf(Looper.getMainLooper()).idle()
-        probe("back_toggles_panel", panel.visibility == View.GONE, "leftPanel.visibility=" + panel.visibility)
 
-        // ---- 菜单键 -> 设置页 ----
+        // ---- 菜单键短按 = 呼出; 长按 = 打开设置页 ----
         a.onKeyDown(KeyEvent.KEYCODE_MENU, key(KeyEvent.KEYCODE_MENU))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
+        a.onKeyUp(KeyEvent.KEYCODE_MENU, KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MENU))
+        shadowOf(Looper.getMainLooper()).idle()
+        probe("menu_short_press_shows_panel", menuRoot.visibility == View.VISIBLE, "menuRoot.visibility=" + menuRoot.visibility)
+
+        a.onKeyDown(KeyEvent.KEYCODE_MENU, key(KeyEvent.KEYCODE_MENU))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
         shadowOf(Looper.getMainLooper()).idle()
         val nxt = shadowOf(a).nextStartedActivity
-        probe("menu_opens_settings", nxt != null && (nxt.component?.className ?: "").contains("SettingsActivity"),
+        probe("menu_long_press_opens_settings", nxt != null && (nxt.component?.className ?: "").contains("SettingsActivity"),
             "nextStartedActivity=" + (nxt?.component?.className))
+        a.onKeyUp(KeyEvent.KEYCODE_MENU, KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MENU))
 
         srv.close()
         // 收尾: 销毁 Activity 并清空状态, 避免污染同 JVM 的其他测试类

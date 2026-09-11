@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 双栏菜单尺寸：左导航栏(贴边整块) + 频道卡(悬浮) -->
+    <dimen name="nav_width">160dp</dimen>
+    <dimen name="menu_gap">10dp</dimen>
+    <dimen name="card_width">300dp</dimen>
+    <dimen name="menu_width">470dp</dimen>
+    <dimen name="menu_margin_v">12dp</dimen>
+    <dimen name="dim_alpha">0.35</dimen>
+</resources>

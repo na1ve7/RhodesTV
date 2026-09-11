@@ -1,12 +1,12 @@
 {
-  "versionCode": 6,
-  "versionName": "1.5",
+  "versionCode": 7,
+  "versionName": "1.6",
   "apkUrl": "https://gh-proxy.com/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
   "mirrors": [
     "https://ghfast.top/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
     "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV@main/dist/RhodesTV.apk"
   ],
-  "sha256": "90bcb20396b33ea07fc34f768c5256831852f84dfc0819a403b7a505555bb83f",
-  "size": 5164699,
-  "note": "v1.5 修复“发了新版检测不到”：改用不做CDN缓存的 GitHub API 取清单/安装包，并自动把旧内置订阅升级为免缓存地址；更新失败时逐镜像 sha256 校验回退。"
+  "sha256": "b779f36a4a42e0cb3e24a03b42e6ddfe2a6858664e3034c0c31eca252e7eca11",
+  "size": 5171649,
+  "note": "v1.6 全新双栏UI：纯视频背景 + 左侧导航栏 + 悬浮频道卡（半透明深色压暗），菜单键呼出/左滑入，频道号数字方块，底部按键提示条；移除播放时左上角频道名大字与右下角EPG；修复跳台后数字键残留旧值。"
 }
