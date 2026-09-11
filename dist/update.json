@@ -1,12 +1,12 @@
 {
-  "versionCode": 5,
-  "versionName": "1.4",
+  "versionCode": 6,
+  "versionName": "1.5",
   "apkUrl": "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV@main/dist/RhodesTV.apk",
   "mirrors": [
     "https://gh-proxy.com/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
     "https://ghfast.top/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk"
   ],
-  "sha256": "d7bf7c0a3d4c3f35358a734a66bafc36a1ae7c956c6997e8b16da76bf0baa9cc",
-  "size": 5164028,
-  "note": "v1.4 修复更新链路：jsDelivr 缓存改用官方 purge 强制回源，镜像换成国内实测可用的 gh-proxy/ghfast（原 githack/raw 在国内被墙导致回退失效）；下载逐镜像 sha256 校验。同时保留 v1.3 的内置直播源与离线快照。"
+  "sha256": "98f7d9ace6dae8f7ab090e68666480ea35626678eb4f4a7eb296013bf5ef29ae",
+  "size": 5164551,
+  "note": "v1.5 修复“发了新版检测不到”：改用不做CDN缓存的 GitHub API 取清单/安装包，并自动把旧内置订阅升级为免缓存地址；更新失败时逐镜像 sha256 校验回退。"
 }

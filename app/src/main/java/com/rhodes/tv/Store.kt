@@ -109,7 +109,23 @@ object ChannelStore {
             var stream = body.byteStream()
             val gz = url.endsWith(".gz") || (resp.header("Content-Encoding")?.contains("gzip") == true)
             if (gz) stream = GZIPInputStream(stream)
-            stream.readBytes().toString(Charsets.UTF_8)
+            decodeApiBody(url, stream.readBytes().toString(Charsets.UTF_8))
+        }
+    }
+
+    /**
+     * GitHub Contents API 返回 JSON（正文 base64）。
+     * 为什么用它当第一优先：jsDelivr / githack / gh-proxy 全带 CDN 缓存，实测能一直返回旧清单
+     * （发了新频道却看不到）；api.github.com 每次都是仓库实时内容，国内可直连（匿名 60 次/小时）。
+     */
+    private fun decodeApiBody(url: String, text: String): String {
+        if (!url.contains("api.github.com")) return text
+        return try {
+            val c = org.json.JSONObject(text).optString("content", "")
+            if (c.isEmpty()) text
+            else String(android.util.Base64.decode(c.replace("\n", ""), android.util.Base64.DEFAULT), Charsets.UTF_8)
+        } catch (e: Exception) {
+            text
         }
     }
 
@@ -118,8 +134,16 @@ object ChannelStore {
     private const val ASSET_SOURCES = "default_sources.txt"
     private const val ASSET_SEED = "seed.m3u"
 
-    /** 内置备用镜像：与默认订阅是同一份清单（不同 CDN 线路），主源全挂时逐个尝试 */
+    /** GitHub Contents API：不做 CDN 缓存、国内可直连，作为「最新清单」的权威来源 */
+    private const val API_SRC =
+        "https://api.github.com/repos/na1ve7/RhodesTV-sources/contents/dist/playable.m3u?ref=main"
+
+    /**
+     * 备用镜像（与默认订阅同一份清单）。
+     * 注意顺序：API 第一（实时），其余 CDN 都有缓存（可能返回旧清单）。
+     */
     private val MIRRORS = listOf(
+        API_SRC,
         "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV-sources@main/dist/playable.m3u",
         "https://gh-proxy.com/https://raw.githubusercontent.com/na1ve7/RhodesTV-sources/main/dist/playable.m3u",
         "https://ghfast.top/https://raw.githubusercontent.com/na1ve7/RhodesTV-sources/main/dist/playable.m3u"
@@ -136,13 +160,24 @@ object ChannelStore {
      * 首次启动（订阅为空）时自动填入内置默认源，用户无需手动添加。
      * 用户在设置页改过订阅后不会再覆盖。
      */
+    /** 老版本内置的 CDN 地址（有 12h 缓存，会一直拿到旧清单）→ 自动升级为上面的 API 地址 */
+    private const val LEGACY_BUILTIN =
+        "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV-sources@main/dist/playable.m3u"
+
     fun ensureDefaults(c: Context) {
         try {
-            if (Prefs.list(c, Prefs.KEY_SUBS).isNotEmpty()) return
-            val urls = assetText(c, ASSET_SOURCES).split('\n')
-                .map { it.trim() }
-                .filter { it.isNotEmpty() && !it.startsWith("#") }
-            if (urls.isNotEmpty()) Prefs.save(c, Prefs.KEY_SUBS, urls)
+            val cur = Prefs.list(c, Prefs.KEY_SUBS)
+            if (cur.isEmpty()) {
+                val urls = assetText(c, ASSET_SOURCES).split('\n')
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() && !it.startsWith("#") }
+                if (urls.isNotEmpty()) Prefs.save(c, Prefs.KEY_SUBS, urls)
+                return
+            }
+            // 老版本装过的用户：把内置的 CDN 地址换成免缓存的 API 地址（用户自加的地址不动）
+            if (cur.contains(LEGACY_BUILTIN)) {
+                Prefs.save(c, Prefs.KEY_SUBS, cur.map { if (it == LEGACY_BUILTIN) API_SRC else it })
+            }
         } catch (e: Exception) {
         }
     }

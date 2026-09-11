@@ -46,8 +46,12 @@ object Updater {
     const val KEY_AUTO_CHECK = "auto_update_check"
     const val KEY_LAST_CHECK = "last_update_check"
 
-    /** 默认清单地址：CDN（国内最快，会先 purge 破缓存） → 国内可用 GitHub 代理 */
+    /**
+     * 默认清单地址。第一项是 GitHub Contents API —— 它不做 CDN 缓存，永远返回仓库真实内容，
+     * 实测国内可直连；后面的 jsDelivr / GitHub 代理都带缓存（曾出现「发了新版却检测不到」）。
+     */
     val DEFAULT_URLS = listOf(
+        "https://api.github.com/repos/na1ve7/RhodesTV/contents/dist/update.json?ref=main",
         "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV@main/dist/update.json",
         "https://gh-proxy.com/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/update.json",
         "https://ghfast.top/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/update.json"
@@ -152,6 +156,22 @@ object Updater {
         return u
     }
 
+    /**
+     * GitHub Contents API 返回的是 JSON（文件内容 base64 编码）。
+     * 之所以用它：CDN（jsDelivr/githack/gh-proxy）全都带缓存，实测能返旧文件；
+     * api.github.com 每次都返回仓库真实内容，国内可直连（匿名额度 60 次/小时，够用）。
+     */
+    private fun decodeApiBody(url: String, text: String): String {
+        if (!url.contains("api.github.com")) return text
+        return try {
+            val c = org.json.JSONObject(text).optString("content", "")
+            if (c.isEmpty()) text
+            else String(android.util.Base64.decode(c.replace("\n", ""), android.util.Base64.DEFAULT), Charsets.UTF_8)
+        } catch (e: Exception) {
+            text
+        }
+    }
+
     /** 拉取文本（清单） */
     private fun httpGet(url: String): String {
         val req = Request.Builder().url(bust(url))
@@ -160,7 +180,7 @@ object Updater {
             .build()
         client.newCall(req).execute().use { resp ->
             if (!resp.isSuccessful) throw IllegalStateException("HTTP " + resp.code)
-            return resp.body?.string() ?: throw IllegalStateException("空响应")
+            return decodeApiBody(url, resp.body?.string() ?: throw IllegalStateException("空响应"))
         }
     }
 
@@ -205,6 +225,8 @@ object Updater {
     private fun httpDownload(url: String, tmp: File, onProgress: (Int) -> Unit) {
         val req = Request.Builder().url(bust(url))
             .header("User-Agent", Prefs.DEFAULT_UA)
+            // GitHub Contents API 需要 raw 头才是文件本体（默认返回 base64 JSON）；它不做 CDN 缓存，最可靠
+            .header("Accept", if (url.contains("api.github.com")) "application/vnd.github.raw" else "*/*")
             .build()
         client.newCall(req).execute().use { resp ->
             if (!resp.isSuccessful) throw IllegalStateException("下载失败 HTTP " + resp.code)
