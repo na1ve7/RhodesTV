@@ -46,11 +46,11 @@ object Updater {
     const val KEY_AUTO_CHECK = "auto_update_check"
     const val KEY_LAST_CHECK = "last_update_check"
 
-    /** 默认清单地址：CDN(国内最快) → GitHub raw → 代理镜像 */
+    /** 默认清单地址：CDN（国内最快，会先 purge 破缓存） → 国内可用 GitHub 代理 */
     val DEFAULT_URLS = listOf(
         "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV@main/dist/update.json",
-        "https://raw.githack.com/na1ve7/RhodesTV/main/dist/update.json",
-        "https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/update.json"
+        "https://gh-proxy.com/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/update.json",
+        "https://ghfast.top/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/update.json"
     )
 
     private val client: OkHttpClient = OkHttpClient.Builder()
@@ -136,10 +136,21 @@ object Updater {
     }
 
     /** jsDelivr 对 @main 有最长 12h 缓存：加时间戳强制取最新（也是"清单不更新"的元凶） */
-    fun bust(u: String): String =
-        if (u.contains("cdn.jsdelivr.net"))
-            u + (if (u.contains('?')) "&" else "?") + "t=" + System.currentTimeMillis()
-        else u
+    /**
+     * jsDelivr 对 @main 缓存最长 12 小时，且加 ?t= 时间戳无效（实测仍返回旧文件）。
+     * 唯一可靠办法：先请求官方 purge 接口强制回源，再正常下载（purge 失败不影响主流程）。
+     */
+    fun bust(u: String): String {
+        if (u.contains("cdn.jsdelivr.net")) {
+            try {
+                val path = u.substringAfter("cdn.jsdelivr.net/").substringBefore("?")
+                client.newCall(Request.Builder().url("https://purge.jsdelivr.net/" + path).build())
+                    .execute().use { it.body?.string() }
+            } catch (e: Exception) {
+            }
+        }
+        return u
+    }
 
     /** 拉取文本（清单） */
     private fun httpGet(url: String): String {

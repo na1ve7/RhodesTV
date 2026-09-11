@@ -121,8 +121,8 @@ object ChannelStore {
     /** 内置备用镜像：与默认订阅是同一份清单（不同 CDN 线路），主源全挂时逐个尝试 */
     private val MIRRORS = listOf(
         "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV-sources@main/dist/playable.m3u",
-        "https://raw.githack.com/na1ve7/RhodesTV-sources/main/dist/playable.m3u",
-        "https://raw.githubusercontent.com/na1ve7/RhodesTV-sources/main/dist/playable.m3u"
+        "https://gh-proxy.com/https://raw.githubusercontent.com/na1ve7/RhodesTV-sources/main/dist/playable.m3u",
+        "https://ghfast.top/https://raw.githubusercontent.com/na1ve7/RhodesTV-sources/main/dist/playable.m3u"
     )
 
     private fun assetText(c: Context, name: String): String =
@@ -158,9 +158,21 @@ object ChannelStore {
         }
     }
 
-    /** jsDelivr 等 CDN 对 @main 有最长 12 小时缓存：加时间戳强制取到最新清单 */
-    private fun bust(url: String, minutes: Long = System.currentTimeMillis() / 60000): String =
-        if (url.contains("jsdelivr")) url + (if (url.contains("?")) "&" else "?") + "t=" + minutes else url
+    /**
+     * jsDelivr 对 @main 的缓存最长 12 小时，而且加 ?t= 时间戳也无效（实测仍返回旧文件）。
+     * 唯一可靠办法：先请求官方 purge 接口强制回源，再正常拉取（purge 失败也不影响主流程）。
+     */
+    private fun bust(url: String, minutes: Long = System.currentTimeMillis() / 60000): String {
+        if (url.contains("cdn.jsdelivr.net")) {
+            try {
+                val path = url.substringAfter("cdn.jsdelivr.net/").substringBefore("?")
+                http.newCall(Request.Builder().url("https://purge.jsdelivr.net/" + path).build())
+                    .execute().use { it.body?.string() }
+            } catch (e: Exception) {
+            }
+        }
+        return url
+    }
 
     fun fetchAll(c: Context): List<Channel> {
         ensureDefaults(c)
