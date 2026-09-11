@@ -16,6 +16,15 @@ object Prefs {
     const val KEY_EPG = "epg"
     const val KEY_UA = "ua"
 
+    /** GitHub Token（可选）：手机端「重体检单个频道」用它触发源仓库 Actions。只存本机，不入库 */
+    const val KEY_GH_PAT = "gh_pat"
+
+    fun ghPat(c: Context): String = get(c).getString(KEY_GH_PAT, "")?.trim() ?: ""
+
+    fun saveGhPat(c: Context, v: String) {
+        get(c).edit().putString(KEY_GH_PAT, v.trim()).apply()
+    }
+
     const val DEFAULT_UA =
         "Mozilla/5.0 (Linux; Android 12; TV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 

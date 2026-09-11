@@ -9,6 +9,9 @@ import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLDecoder
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -112,6 +115,7 @@ class ConfigServer(private val ctx: Context) {
             }
             params["subs"]?.let { Prefs.save(ctx, Prefs.KEY_SUBS, splitLines(it)) }
             params["epg"]?.let { Prefs.save(ctx, Prefs.KEY_EPG, splitLines(it)) }
+            params["pat"]?.let { if (it.trim().isNotEmpty()) Prefs.saveGhPat(ctx, it.trim()) }
             respond(out, 302, "text/plain; charset=utf-8", "", "Location: /?ok=1\r\n")
             return
         }
@@ -142,6 +146,7 @@ class ConfigServer(private val ctx: Context) {
         val epg = esc(Prefs.list(ctx, Prefs.KEY_EPG).joinToString("\n"))
         val n = ChannelStore.load(ctx).size
         val banner = if (ok) "<p style='color:#2e7d32;font-weight:bold'>已保存 ✓ 电视端下次启动或刷新即生效</p>" else ""
+        val patState = if (Prefs.ghPat(ctx).isEmpty()) "未配置（粘贴 GitHub Token 后点保存）" else "已配置，留空保持不变"
         return "<!DOCTYPE html><html><head><meta charset='utf-8'>" +
             "<meta name='viewport' content='width=device-width,initial-scale=1'>" +
             "<title>罗德岛TV · 设置</title><style>" +
@@ -152,16 +157,48 @@ class ConfigServer(private val ctx: Context) {
             "border-radius:8px;min-height:150px}" +
             "button{width:100%;margin-top:20px;padding:16px;font-size:18px;color:#fff;background:#1e88e5;" +
             "border:0;border-radius:10px}" +
-            ".tip{background:#fff;border-radius:10px;padding:12px;font-size:14px;color:#666;margin-top:18px}</style></head><body>" +
+            ".tip{background:#fff;border-radius:10px;padding:12px;font-size:14px;color:#666;margin-top:18px}" +
+            ".card{background:#fff;border-radius:10px;padding:12px;margin-top:18px}" +
+            ".row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;" +
+            "border-bottom:1px solid #eee;font-size:15px}.mono{font-size:13px;color:#888}" +
+            "input.search{width:100%;box-sizing:border-box;padding:10px;font-size:15px;border:1px solid #ccc;" +
+            "border-radius:8px}.mini{width:auto;margin:0;padding:8px 14px;font-size:15px;background:#e53935;" +
+            "border-radius:8px}</style></head><body>" +
             "<h1>罗德岛TV · 设置</h1>" + banner +
             "<form method='post' action='/save'>" +
             "<label>直播源订阅地址（每行一条，m3u 或 txt）</label>" +
             "<textarea name='subs'>" + subs + "</textarea>" +
             "<label>EPG 节目单地址（可留空）</label>" +
             "<textarea name='epg'>" + epg + "</textarea>" +
+            "<label>GitHub Token（可选，仅用于手机端「重体检单个频道」，只存电视本机）</label>" +
+            "<input class='search' type='password' name='pat' placeholder='" + patState + "'>" +
             "<button type='submit'>保存</button></form>" +
             "<div class='tip'>当前电视端已缓存频道数：" + n +
             "<br>保存后回到电视，按「菜单」→「保存并刷新」或重启 App 生效。</div>" +
+            "<div class='card'><label>频道维护 · 单个频道实时换源（不用等 6 小时）</label>" +
+            "<input class='search' id='kw' placeholder='搜索频道名，例如 湖南卫视' oninput='rcSearch()'>" +
+            "<div id='rclist'></div><p class='mono' id='rcmsg'>点频道右侧「重体检」→ 云端只重跑这个台的线路 → 再点「刷新电视端频道」。</p>" +
+            "<button class='mini' onclick='rfGo()'>刷新电视端频道</button></div>" +
+            "<script>" +
+            "function ef(s){var t=String(s);t=t.split('&').join('&amp;');t=t.split('<').join('&lt;');return t;}" +
+            "window.__rc=[];" +
+            "async function rcSearch(){var kw=document.getElementById('kw').value.trim();" +
+            "var box=document.getElementById('rclist');if(!kw){box.innerHTML='';return;}" +
+            "var r=await fetch('/api/channels?q='+encodeURIComponent(kw)+'&limit=30');" +
+            "var j=await r.json();var a=j.channels||[];window.__rc=a;var h='';" +
+            "for(var i=0;i<a.length;i++){var c=a[i];" +
+            "h+='<div class=row><span>'+ef(c.group)+' · '+ef(c.name)+(c.dead?'（暂无线路）':'')+'</span>'" +
+            "+'<button class=mini onclick=rcGo('+i+')>重体检</button></div>';}" +
+            "box.innerHTML=h||'<p class=mono>没有匹配的频道</p>';}" +
+            "async function rcGo(i){var c=window.__rc[i];if(!c)return;" +
+            "var m=document.getElementById('rcmsg');m.textContent=c.name+'：正在提交云端重体检…';" +
+            "var r=await fetch('/api/recheck?ch='+encodeURIComponent(c.key),{method:'POST'});" +
+            "var j=await r.json();" +
+            "m.textContent=j.ok?(c.name+'：'+(j.tip||'已提交')):('失败：'+(j.error||'未知错误'));}" +
+            "function rfGo(){var m=document.getElementById('rcmsg');m.textContent='正在通知电视端刷新…';" +
+            "fetch('/api/refresh',{method:'POST'}).then(function(r){return r.json()}).then(function(j){" +
+            "m.textContent=j.ok?'已通知电视端刷新，稍等几秒回电视看新线路':'刷新失败';});}" +
+            "</script>" +
             "</body></html>"
     }
 
@@ -194,12 +231,54 @@ class ConfigServer(private val ctx: Context) {
                 "/api/group" -> if (method == "POST") groupPost(q) else groupsJson()
                 "/api/refresh" -> refreshPost()
                 "/api/update" -> updateJson()
+                "/api/recheck" -> recheckPost(q)
                 "/api/ping" -> JSONObject().put("ok", true).put("app", "RhodesTV")
                     .put("ts", System.currentTimeMillis()).toString()
                 else -> JSONObject().put("ok", false).put("error", "unknown api " + route).toString()
             }
         } catch (e: Exception) {
             JSONObject().put("ok", false).put("error", e.message ?: "error").toString()
+        }
+    }
+
+    /** 手机端「这个台卡了 → 立刻重体检」：调源仓库 Actions workflow_dispatch，只重跑该频道的线路 */
+    private fun recheckPost(q: HashMap<String, String>): String {
+        val o = JSONObject()
+        val key = (q["ch"] ?: q["key"] ?: q["channel"] ?: "").trim()
+        if (key.isEmpty()) {
+            o.put("ok", false)
+            o.put("error", "缺少频道参数 ch")
+            return o.toString()
+        }
+        val pat = Prefs.ghPat(ctx)
+        if (pat.isEmpty()) {
+            o.put("ok", false)
+            o.put("error", "还没配置 GitHub Token：在本页底部填一次即可")
+            return o.toString()
+        }
+        return try {
+            val body = JSONObject()
+                .put("ref", "main")
+                .put("inputs", JSONObject().put("channel", key).put("skip_gitee", "true"))
+                .toString()
+            val req = Request.Builder()
+                .url("https://api.github.com/repos/na1ve7/RhodesTV-sources/actions/workflows/refresh.yml/dispatches")
+                .header("Authorization", "Bearer " + pat)
+                .header("Accept", "application/vnd.github+json")
+                .post(body.toRequestBody("application/json; charset=utf-8".toMediaType()))
+                .build()
+            ChannelStore.http.newCall(req).execute().use { r ->
+                o.put("ok", r.isSuccessful)
+                o.put("code", r.code)
+                if (!r.isSuccessful) o.put("error", "GitHub 返回 " + r.code)
+            }
+            o.put("channel", key)
+            o.put("tip", "云端已开始重体检，约 1-2 分钟后点「刷新频道」生效")
+            o.toString()
+        } catch (e: Exception) {
+            o.put("ok", false)
+            o.put("error", e.message ?: "请求失败")
+            o.toString()
         }
     }
 
@@ -322,9 +401,12 @@ class ConfigServer(private val ctx: Context) {
             if (total <= offset) continue
             if (arr.length() >= limit) continue
             val o = JSONObject()
-            o.put("no", i + 1)
+            o.put("no", ch.chno ?: (i + 1))
             o.put("name", ch.name)
             o.put("group", cg)
+            o.put("key", ch.key)
+            o.put("chno", ch.chno ?: 0)
+            o.put("dead", !ch.playable)
             o.put("fav", favs.contains(ch.name))
             o.put("lines", ch.lines.size)
             arr.put(o)

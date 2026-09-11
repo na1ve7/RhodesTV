@@ -24,12 +24,20 @@ object M3uParser {
                 // 分组不再直接采用上游 group-title（多而杂乱、组内关系不大）：按名称规则重分类为 12 大类
                 val group = GroupRules.classify(name, attrs["group-title"] ?: "")
                 val tvgId = attrs["tvg-id"]?.takeIf { it.isNotBlank() }
-                // key 用归一化频道名：同一频道的多条线路（不同画质/后缀）在此合并为一条多线路频道
-                val key = GroupRules.normName(rawName)
-                pending = out.getOrPut(key) {
+                // 频道号：云端规范库下发（CCTV-1=1 … CCTV-5+=18 … 卫视 101+ …），电视端左侧数字方块与组内排序都用它
+                val chno = attrs["tvg-chno"]?.trim()?.toIntOrNull()
+                // 占位频道标记：云端体检后该频道当前无任何可用线路，仍下发以便列表保持固定顺序（灰显不可播）
+                val isDead = attrs["rhodes-dead"] == "1"
+                // key 优先用云端规范 id（跨源一致，线路归并最准），退回归一化频道名
+                val key = tvgId ?: GroupRules.normName(rawName)
+                val ch = out.getOrPut(key) {
                     Channel(key = key, name = name, group = group,
-                        logo = attrs["tvg-logo"]?.takeIf { it.isNotBlank() }, tvgId = tvgId)
+                        logo = attrs["tvg-logo"]?.takeIf { it.isNotBlank() }, tvgId = tvgId,
+                        chno = chno, dead = isDead)
                 }
+                pending = ch
+                if (chno != null) ch.chno = chno
+                if (isDead) ch.dead = true
                 ua = null
                 ref = null
             } else if (line.startsWith("#EXTVLCOPT") || line.startsWith("#KODIPROP")) {
@@ -62,6 +70,9 @@ object M3uParser {
             } else {
                 val seen = exist.lines.map { it.url }.toHashSet()
                 for (l in c.lines) if (seen.add(l.url)) exist.lines.add(l)
+                // 后到的源若带来了真实线路，覆盖「占位/暂无线路」状态；频道号也以有值的为准
+                if (c.lines.any { !it.url.startsWith(Channel.DEAD_SCHEME) }) exist.dead = false
+                if (exist.chno == null) exist.chno = c.chno
             }
         }
     }

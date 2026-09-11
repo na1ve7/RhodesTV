@@ -110,18 +110,24 @@ class PlayerController(private val ctx: Context, private val view: PlayerView) {
         current = ch
         failed = 0
         retryRound = 0
-        val n = ch.lines.size
+        // 云端下发的「暂无线路」占位条目（url = dead://KEY）不参与播放尝试
+        val usable = ch.lines.indices.filter { !ch.lines[it].url.startsWith(Channel.DEAD_SCHEME) }
+        val n = usable.size
         if (n == 0) {
             order = emptyList()
             pos = 0
             lineIdx = 0
         } else {
             val bad = Prefs.badLines(ctx)
-            order = (0 until n).filter { !bad.contains(ch.lines[it].url) } +
-                (0 until n).filter { bad.contains(ch.lines[it].url) }
+            order = usable.filter { !bad.contains(ch.lines[it].url) } +
+                usable.filter { bad.contains(ch.lines[it].url) }
             // startLine < 0 → 用线路记忆（该频道上次成功的线路）
             val want = if (startLine >= 0) startLine else Prefs.lineMem(ctx, ch.name)
             pos = order.indexOf(want).takeIf { it >= 0 } ?: 0
+        }
+        if (n == 0) {
+            onAllFailed?.invoke("暂无可用线路")
+            return
         }
         openLine()
     }

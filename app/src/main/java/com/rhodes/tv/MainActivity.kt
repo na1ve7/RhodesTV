@@ -249,6 +249,9 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
             favGroupIndex > 0 && index == 1 -> all.filter { favs.contains(it.name) }
             else -> all.filter { it.group == groupNames[index] }
         }
+        // 组内排序：分组顺序 → 频道号（CCTV-1≈1…CCTV-5+≈18、卫视 101+）→ 名称
+        // 云端下发的规范顺序优先，用户一眼就能找到「央视 1 套」，不用自己数
+        shown = GroupRules.sortChannels(shown)
         curPos = -1
         (list.adapter as? ChAdapter)?.notifyDataSetChanged() ?: run { list.adapter = ChAdapter() }
         (list.adapter as? BaseAdapter)?.notifyDataSetChanged()
@@ -283,6 +286,10 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         curPos = pos
         val ch = shown[pos]
         curLine = 1
+        if (!ch.playable) {                     // 云端已标记「暂无线路」的占位频道：不切台、只提示
+            showToast("「" + ch.name + "」暂无可用线路")
+            return
+        }
         // -1 = 走「线路记忆」：优先用该频道上次播放成功的线路，没有记忆则从第 1 条开始
         player.play(ch, -1)
         Prefs.get(this).edit().putInt("last_ch", pos).apply()
@@ -483,12 +490,20 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
             val name = v.findViewById<TextView>(R.id.tvName)
             val sub = v.findViewById<TextView>(R.id.tvProg)
             val ch = shown[position]
-            no.text = (position + 1).toString()
+            val dead = !ch.playable
+            val cFg = ContextCompat.getColor(this@MainActivity, R.color.fg)
+            val cDim = ContextCompat.getColor(this@MainActivity, R.color.dim)
+            // 左侧数字方块 = 频道号（云端规范库下发）；没有频道号的上游频道用列表序号兜底
+            no.text = ch.chno?.toString() ?: (position + 1).toString()
             name.text = ch.name
-            var s = ""
-            val nn = EpgStore.nowNext(ch)
-            if (nn.first != null) s = nn.first?.title ?: ""
-            if (s.isEmpty()) s = if (ch.lines.size > 1) "共 " + ch.lines.size + " 条线路" else ""
+            no.setTextColor(if (dead) cDim else cFg)
+            name.setTextColor(if (dead) cDim else cFg)
+            var s = if (dead) "暂无可用线路 · 云端体检后自动恢复" else ""
+            if (!dead) {
+                val nn = EpgStore.nowNext(ch)
+                if (nn.first != null) s = nn.first?.title ?: ""
+                if (s.isEmpty()) s = if (ch.lines.size > 1) "共 " + ch.lines.size + " 条线路" else ""
+            }
             sub.text = s
             sub.visibility = if (s.isEmpty()) View.GONE else View.VISIBLE
             return v

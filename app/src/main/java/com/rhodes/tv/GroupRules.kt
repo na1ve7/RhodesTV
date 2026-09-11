@@ -984,4 +984,18 @@ object GroupRules {
         val i = ORDER.indexOf(group)
         return if (i < 0) ORDER.size else i
     }
+
+    /**
+     * 组内排序：分组顺序 → 频道号 → 名称。
+     * 频道号由云端规范库下发（CCTV-1=1 … CCTV-5+=18、CCTV-4K=19、卫视 101+、体育 201+），
+     * 没有频道号的频道排在组内最后，避免上游顺序把「央视一套」甩到列表尾巴。
+     */
+    fun sortChannels(list: List<Channel>): List<Channel> {
+        if (list.size < 2) return list
+        val hasNo = list.any { it.chno != null }
+        if (!hasNo) return list
+        return list.sortedWith(
+            compareBy({ orderOf(it.group) }, { it.chno ?: Int.MAX_VALUE }, { it.name })
+        )
+    }
 }
