@@ -6,7 +6,7 @@
     "https://raw.githack.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
     "https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk"
   ],
-  "sha256": "0c78740f55b1e318b9048122d7e98bdc4bf166beb8c51fbe9e4bb6f32d9d6be8",
-  "size": 5163194,
-  "note": "v1.3 内置直播源：首次安装零配置直接出频道（内置离线快照 + 3级镜像自动回退），并修复 jsDelivr 缓存导致清单不更新的问题；云端每6小时自动体检，频道自动更新。"
+  "sha256": "0e6db34f77e00ecb863c93e549e06ad748c72b82c56a3817c243c46f32858bce",
+  "size": 5163650,
+  "note": "v1.3 内置直播源：首次安装零配置直接出频道（内置离线快照 + 3级镜像自动回退）；并修复 jsDelivr 缓存导致的清单/安装包不更新（现在多镜像并发比对版本 + 每个包 sha256 校验）；云端每6小时自动体检。"
 }

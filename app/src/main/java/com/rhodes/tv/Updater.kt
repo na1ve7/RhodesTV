@@ -114,21 +114,36 @@ object Updater {
      */
     fun check(c: Context): UpdateInfo? {
         var lastErr: Exception? = null
+        var best: UpdateInfo? = null
+        var gotAny = false
         for (u in urls(c)) {
             try {
                 val info = parseManifest(manifestFetcher(u)) ?: continue
-                Prefs.get(c).edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
-                return if (isNewer(info.versionCode, currentCode(c))) info else null
+                gotAny = true
+                // 多个镜像可能因 CDN 缓存给出不同版本：取最大的那个，避免"漏更新"
+                if (isNewer(info.versionCode, currentCode(c)) &&
+                    (best == null || info.versionCode > best!!.versionCode)
+                ) best = info
             } catch (e: Exception) {
                 lastErr = e
             }
         }
+        if (gotAny) {
+            Prefs.get(c).edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
+            return best
+        }
         throw lastErr ?: IllegalStateException("没有可用的更新地址")
     }
 
+    /** jsDelivr 对 @main 有最长 12h 缓存：加时间戳强制取最新（也是"清单不更新"的元凶） */
+    fun bust(u: String): String =
+        if (u.contains("cdn.jsdelivr.net"))
+            u + (if (u.contains('?')) "&" else "?") + "t=" + System.currentTimeMillis()
+        else u
+
     /** 拉取文本（清单） */
     private fun httpGet(url: String): String {
-        val req = Request.Builder().url(url)
+        val req = Request.Builder().url(bust(url))
             .header("User-Agent", Prefs.DEFAULT_UA)
             .header("Cache-Control", "no-cache")
             .build()
@@ -143,8 +158,19 @@ object Updater {
         val out = File(c.cacheDir, "RhodesTV-update-" + info.versionCode + ".apk")
         val tmp = File(c.cacheDir, out.name + ".part")
         if (tmp.exists()) tmp.delete()
-        fileDownloader(info.apkUrl, tmp, onProgress)
-        return finalizeDownload(tmp, out, info.sha256)
+        // 主地址可能是被 CDN 缓存的旧包 → sha256 校验失败就换下一个镜像重试
+        var lastErr: Exception? = null
+        val cands = (listOf(info.apkUrl) + urls(c).map { it.replace("update.json", "RhodesTV.apk") }).distinct()
+        for (u in cands) {
+            try {
+                if (tmp.exists()) tmp.delete()
+                fileDownloader(u, tmp, onProgress)
+                return finalizeDownload(tmp, out, info.sha256)
+            } catch (e: Exception) {
+                lastErr = e
+            }
+        }
+        throw lastErr ?: IllegalStateException("下载失败：所有镜像都不可用")
     }
 
     /** 校验 sha256 后把临时文件转正；校验失败抛异常并清理残留 */
@@ -166,7 +192,7 @@ object Updater {
 
     /** 真实下载（OkHttp → 临时文件），带进度回调 */
     private fun httpDownload(url: String, tmp: File, onProgress: (Int) -> Unit) {
-        val req = Request.Builder().url(url)
+        val req = Request.Builder().url(bust(url))
             .header("User-Agent", Prefs.DEFAULT_UA)
             .build()
         client.newCall(req).execute().use { resp ->
