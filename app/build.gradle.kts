@@ -13,18 +13,16 @@ android {
         applicationId = "com.rhodes.tv"
         minSdk = 21
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
     }
 
     signingConfigs {
         create("rel") {
-            // 发布版签名密钥不入库：请通过环境变量提供（未提供则回退到 debug 签名）
-            val ks = System.getenv("RHODES_STORE_FILE") ?: "rhodes.keystore"
-            storeFile = file(ks)
-            storePassword = System.getenv("RHODES_STORE_PASSWORD") ?: ""
-            keyAlias = System.getenv("RHODES_KEY_ALIAS") ?: "rhodes"
-            keyPassword = System.getenv("RHODES_KEY_PASSWORD") ?: ""
+            storeFile = file("rhodes.keystore")
+            storePassword = "rhodes12345"
+            keyAlias = "rhodes"
+            keyPassword = "rhodes12345"
         }
     }
 

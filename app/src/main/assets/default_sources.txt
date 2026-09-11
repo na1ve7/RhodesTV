@@ -1,0 +1,4 @@
+# 罗德岛TV 内置默认直播源（首次安装即为空时自动写入设置页）
+# 由本人云端 Actions 每 6 小时自动体检/汇总的成品清单（不含失效线路）
+# 如需自定义：在设置页删除本行地址，改成你自己的 m3u 地址即可
+https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV-sources@main/dist/playable.m3u

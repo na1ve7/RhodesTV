@@ -113,7 +113,57 @@ object ChannelStore {
         }
     }
 
+    // ---------- 内置源：首次安装零配置即可看电视 ----------
+
+    private const val ASSET_SOURCES = "default_sources.txt"
+    private const val ASSET_SEED = "seed.m3u"
+
+    /** 内置备用镜像：与默认订阅是同一份清单（不同 CDN 线路），主源全挂时逐个尝试 */
+    private val MIRRORS = listOf(
+        "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV-sources@main/dist/playable.m3u",
+        "https://raw.githack.com/na1ve7/RhodesTV-sources/main/dist/playable.m3u",
+        "https://raw.githubusercontent.com/na1ve7/RhodesTV-sources/main/dist/playable.m3u"
+    )
+
+    private fun assetText(c: Context, name: String): String =
+        try {
+            c.assets.open(name).bufferedReader().use { it.readText() }
+        } catch (e: Exception) {
+            ""
+        }
+
+    /**
+     * 首次启动（订阅为空）时自动填入内置默认源，用户无需手动添加。
+     * 用户在设置页改过订阅后不会再覆盖。
+     */
+    fun ensureDefaults(c: Context) {
+        try {
+            if (Prefs.list(c, Prefs.KEY_SUBS).isNotEmpty()) return
+            val urls = assetText(c, ASSET_SOURCES).split('\n')
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && !it.startsWith("#") }
+            if (urls.isNotEmpty()) Prefs.save(c, Prefs.KEY_SUBS, urls)
+        } catch (e: Exception) {
+        }
+    }
+
+    /** 随安装包内置的离线快照：没网 / 全部源都失败时也能出频道 */
+    fun fetchSeed(c: Context): List<Channel> {
+        val t = assetText(c, ASSET_SEED)
+        if (t.isBlank()) return emptyList()
+        return try {
+            M3uParser.parse(t)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /** jsDelivr 等 CDN 对 @main 有最长 12 小时缓存：加时间戳强制取到最新清单 */
+    private fun bust(url: String, minutes: Long = System.currentTimeMillis() / 60000): String =
+        if (url.contains("jsdelivr")) url + (if (url.contains("?")) "&" else "?") + "t=" + minutes else url
+
     fun fetchAll(c: Context): List<Channel> {
+        ensureDefaults(c)
         val subs = Prefs.list(c, Prefs.KEY_SUBS)
         val ua = Prefs.ua(c)
         val all = ArrayList<Channel>()
@@ -121,7 +171,7 @@ object ChannelStore {
         var lastErr: Exception? = null
         for (u in subs) {
             try {
-                val list = M3uParser.parse(getText(c, u, ua))
+                val list = M3uParser.parse(getText(c, bust(u), ua))
                 if (list.isNotEmpty()) {
                     M3uParser.merge(all, list)
                     ok++
@@ -130,7 +180,27 @@ object ChannelStore {
                 lastErr = e
             }
         }
-        if (ok == 0) throw (lastErr ?: RuntimeException("no subscription"))
+        if (ok == 0) {
+            // 主源全挂 → 内置镜像（与主源同一份清单，只取第一个成功的，避免同一地址重复成多条线路）
+            for (u in MIRRORS) {
+                try {
+                    val list = M3uParser.parse(getText(c, bust(u), ua))
+                    if (list.isNotEmpty()) {
+                        M3uParser.merge(all, list)
+                        ok++
+                        break
+                    }
+                } catch (e: Exception) {
+                    lastErr = e
+                }
+            }
+        }
+        if (ok == 0) {
+            // 连 CDN 都不可达 → 用随包内置的离线快照，至少保证能看电视
+            val seed = fetchSeed(c)
+            if (seed.isNotEmpty()) return seed
+            throw (lastErr ?: RuntimeException("no subscription"))
+        }
         return all
     }
 

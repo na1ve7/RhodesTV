@@ -1,12 +1,12 @@
 {
-  "versionCode": 3,
-  "versionName": "1.2",
+  "versionCode": 4,
+  "versionName": "1.3",
   "apkUrl": "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV@main/dist/RhodesTV.apk",
   "mirrors": [
     "https://raw.githack.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
     "https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk"
   ],
-  "sha256": "3f20277133601bbb941711a9b986e6e90c138807494627df0516ccceafd9d2e1",
-  "size": 5133421,
-  "note": "新增：设置页「一键远程更新」（自动检查新版本/下载/校验/安装）；修复播放器启动崩溃；收藏分组与数字键换台。"
+  "sha256": "0c78740f55b1e318b9048122d7e98bdc4bf166beb8c51fbe9e4bb6f32d9d6be8",
+  "size": 5163194,
+  "note": "v1.3 内置直播源：首次安装零配置直接出频道（内置离线快照 + 3级镜像自动回退），并修复 jsDelivr 缓存导致清单不更新的问题；云端每6小时自动体检，频道自动更新。"
 }

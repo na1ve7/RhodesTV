@@ -15,6 +15,7 @@ class UpdateWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params)
     override fun doWork(): Result {
         val c = applicationContext
         return try {
+            ChannelStore.ensureDefaults(c)
             if (Prefs.list(c, Prefs.KEY_SUBS).isNotEmpty()) {
                 val d = ChannelStore.fetchAll(c)
                 if (d.isNotEmpty()) ChannelStore.save(c, d)
