@@ -412,6 +412,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
             if (menuRoot.translationX != 0f) {
                 menuRoot.animate().translationX(0f).setDuration(220).setInterpolator(DecelerateInterpolator()).start()
             }
+            videoDim.visibility = View.VISIBLE
             videoDim.animate().alpha(0.38f).setDuration(220).start()
             playerView.animate().scaleX(0.985f).scaleY(0.985f).setDuration(220).start()
             if (curPos >= 0 && list.adapter != null) list.requestFocus() else navList.requestFocus()
@@ -419,7 +420,8 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         } else {
             menuRoot.animate().translationX(-menuW.toFloat()).setDuration(180)
                 .setInterpolator(DecelerateInterpolator()).withEndAction { menuRoot.visibility = View.GONE }.start()
-            videoDim.animate().alpha(0f).setDuration(180).start()
+            videoDim.animate().alpha(0f).setDuration(180)
+                .withEndAction { videoDim.visibility = View.GONE }.start()
             playerView.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
             handler.removeCallbacks(hideTask)
         }

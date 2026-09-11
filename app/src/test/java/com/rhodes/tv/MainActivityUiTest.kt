@@ -77,6 +77,7 @@ class MainActivityUiTest {
         val list = a.findViewById<ListView>(R.id.channelList)
         val nav = a.findViewById<ListView>(R.id.navList)
         val menuRoot = a.findViewById<View>(R.id.menuRoot)
+        val videoDim = a.findViewById<View>(R.id.videoDim)
         val toast = a.findViewById<TextView>(R.id.tvToast)
 
         var count = 0
@@ -130,6 +131,8 @@ class MainActivityUiTest {
         // 再按返回 -> 面板已收起, 交回系统(Activity 应进入 finish 流程, 这里只验证不崩溃)
         a.onKeyDown(KeyEvent.KEYCODE_BACK, key(KeyEvent.KEYCODE_BACK))
         shadowOf(Looper.getMainLooper()).idle()
+        probe("panel_dim_layer_off", videoDim.visibility == View.GONE || videoDim.alpha < 0.05f,
+            "videoDim.visibility=" + videoDim.visibility + " alpha=" + videoDim.alpha)
 
         // ---- 菜单键短按 = 呼出; 长按 = 打开设置页 ----
         a.onKeyDown(KeyEvent.KEYCODE_MENU, key(KeyEvent.KEYCODE_MENU))
@@ -137,6 +140,8 @@ class MainActivityUiTest {
         a.onKeyUp(KeyEvent.KEYCODE_MENU, KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MENU))
         shadowOf(Looper.getMainLooper()).idle()
         probe("menu_short_press_shows_panel", menuRoot.visibility == View.VISIBLE, "menuRoot.visibility=" + menuRoot.visibility)
+        probe("panel_dim_layer_on", videoDim.visibility == View.VISIBLE && videoDim.alpha > 0.30f,
+            "videoDim.visibility=" + videoDim.visibility + " alpha=" + videoDim.alpha)
 
         a.onKeyDown(KeyEvent.KEYCODE_MENU, key(KeyEvent.KEYCODE_MENU))
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))

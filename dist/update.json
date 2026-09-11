@@ -6,7 +6,7 @@
     "https://ghfast.top/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
     "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV@main/dist/RhodesTV.apk"
   ],
-  "sha256": "b779f36a4a42e0cb3e24a03b42e6ddfe2a6858664e3034c0c31eca252e7eca11",
-  "size": 5171649,
-  "note": "v1.6 全新双栏UI：纯视频背景 + 左侧导航栏 + 悬浮频道卡（半透明深色压暗），菜单键呼出/左滑入，频道号数字方块，底部按键提示条；移除播放时左上角频道名大字与右下角EPG；修复跳台后数字键残留旧值。"
+  "sha256": "fef5e853ded78f840a3c0277885bc6b07e862869e5f83b28546cbe18069c7916",
+  "size": 5172060,
+  "note": "v1.6 全新双栏UI：纯视频背景 + 左侧导航栏 + 悬浮频道卡（呼出时画面半透明压暗），菜单键短按呼出/收起（左滑入动画）、长按打开设置，频道号数字方块，底部按键提示条，数字键缓冲跳台；移除播放时左上角频道名大字与右下角EPG；修复跳台后数字键残留旧值与菜单压暗层不显示。"
 }
