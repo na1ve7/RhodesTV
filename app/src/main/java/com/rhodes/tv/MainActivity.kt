@@ -38,6 +38,11 @@ import java.util.Locale
 @UnstableApi
 class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView.OnItemClickListener {
 
+    companion object {
+        /** 左栏「我的收藏」分组的固定下标：紧跟「全部频道」，恒显示（空组只留空列表，不放占位项）。 */
+        private const val FAV_GROUP = 1
+    }
+
     private lateinit var playerView: PlayerView
     private lateinit var videoDim: View
     private lateinit var menuRoot: View
@@ -61,9 +66,11 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
     private var all: MutableList<Channel> = ArrayList()
     private var shown: List<Channel> = ArrayList()
     private var groupNames: List<String> = ArrayList()
-    private var favGroupIndex = -1
     private var curGroup = 0
-    private var curPos = -1
+    private var curPos = -1                 // 「正在播放」的频道在 shown 中的下标（-1 = 没有正在播放的）
+    private var selectedPos = -1            // 「光标/高亮」位置，与正在播放解耦：上下键只动它，不切台
+    private var playingName: String? = null // 正在播放频道的名字：换组时用它把光标定位回正在播放那一行
+    private var suppressCursor = false      // true = 接下来的 onItemSelected 是程序化定位，不当作用户移动
     private var curLine = 1
     private var panelVisible = false
     private var loading = false
@@ -72,6 +79,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
     private var menuLongFired = false
 
     private val hideTask = Runnable { setPanel(false) }
+    private val clearSuppress = Runnable { suppressCursor = false }
     private val toastTask = Runnable { hideToast() }
     private val numTask = Runnable { jumpTo(numBuf) }
     private val menuLongTask = Runnable { menuLongFired = true; openSettings() }
@@ -122,8 +130,12 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
                 openSettings()
             } else {
                 if (position != curGroup) selectGroup(position)
-                list.requestFocus()
-                if (list.childCount > 0) list.setSelection(if (curPos < 0) 0 else curPos)
+                if (shown.isEmpty()) {
+                    navList.requestFocus()      // 空组（如无收藏）焦点留在左栏，别困进空列表
+                } else {
+                    list.requestFocus()
+                    silentSelect(if (selectedPos < 0) 0 else selectedPos)
+                }
             }
         }
 
@@ -142,6 +154,11 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
             statusBox.visibility = View.VISIBLE
             tvStatus.text = "暂时无法播放"
             TvState.onError(msg)
+        }
+        // 播放成功 → 撤掉状态覆盖层；否则失败后再切到能播的频道，「暂时无法播放」会永久残留
+        player.onReady = {
+            // onReady 由 ExoPlayer 在应用主线程回调，保险起见统一切回 UI 线程
+            runOnUiThread { statusBox.visibility = View.GONE }
         }
         server = ConfigServer.shared(this)
         server?.let { srv ->
@@ -186,12 +203,14 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
             }
             buildGroups()
             val last = Prefs.get(this@MainActivity).getInt("last_ch", 0)
-            curPos = -1
-            val start = if (last in 0 until shown.size) last else 0
-            list.setSelection(start)
-            statusBox.visibility = View.GONE
-            playChannel(start)
-            list.requestFocus()
+            if (shown.isEmpty()) {
+                navList.requestFocus()      // 空组（无收藏）：别把焦点放进空列表，否则遥控器像失灵
+            } else {
+                val start = if (last in 0 until shown.size) last else 0
+                playChannel(start)          // playChannel 内部会撤掉状态覆盖层
+                silentSelect(start)         // 光标静默同步到「正在播放那一行」，不触发额外切台
+                list.requestFocus()
+            }
             loadEpgAsync()
             scheduleHide()
         }
@@ -216,7 +235,6 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
     // ---------- 分组 / 数据 ----------
 
     private fun buildGroups() {
-        val favs = Prefs.favSet(this)
         val hidden = Prefs.hiddenGroups(this)
         val raw = LinkedHashSet<String>()
         for (c in all) if (!hidden.contains(c.group)) raw.add(c.group)
@@ -228,8 +246,8 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
 
         val names = ArrayList<String>()
         names.add("全部频道")
-        favGroupIndex = if (favs.isEmpty()) -1 else 1
-        if (favGroupIndex > 0) names.add(Prefs.FAV_GROUP)
+        // 「我的收藏」恒定占 index 1（紧跟「全部频道」）：空也显示，不随收藏数量增减而隐藏/移动
+        names.add(Prefs.FAV_GROUP)
         names.addAll(ordered)
         groupNames = names
 
@@ -245,23 +263,50 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         val hidden = Prefs.hiddenGroups(this)
         shown = when {
             index == 0 -> all.filter { !hidden.contains(it.group) }
-            favGroupIndex > 0 && index == 1 -> favChannels()
+            index == FAV_GROUP -> favChannels()      // 空收藏 → 空集合，不放「暂无收藏」占位项
             else -> all.filter { it.group == groupNames[index] }
         }
         // 组内排序：分组顺序 → 频道号（CCTV-1≈1…CCTV-5+≈18、卫视 101+）→ 名称
         // 云端下发的规范顺序优先，用户一眼就能找到「央视 1 套」，不用自己数
         shown = GroupRules.sortChannels(shown)
-        curPos = -1
+        curPos = playingIndex()          // 「正在播放」的频道在本组的下标（不在本组 = -1）
         (list.adapter as? ChAdapter)?.notifyDataSetChanged() ?: run { list.adapter = ChAdapter() }
         (list.adapter as? BaseAdapter)?.notifyDataSetChanged()
         (navList.adapter as? BaseAdapter)?.notifyDataSetChanged()
         tvCardTitle.text = groupTitle()
         tvHintBar.text = hintText()
-        if (shown.isNotEmpty()) list.setSelection(0)
+        if (shown.isEmpty()) {
+            // 空组不留占位项：焦点直接交回左栏，避免「焦点困在空列表 → 遥控器像失灵」
+            selectedPos = -1
+            navList.requestFocus()
+        } else {
+            // 进组后光标停在「正在播放的那一行」（不在本组则退化为第一行）；静默定位，不触发切台
+            silentSelect(playingIndex().coerceAtLeast(0))
+        }
+    }
+
+    /** 正在播放的频道在当前 shown 中的下标（不在本组 / 尚未播放 → -1）。 */
+    private fun playingIndex(): Int {
+        val name = playingName ?: return -1
+        return shown.indexOfFirst { GroupRules.favSame(it.name, name) }
     }
 
     /**
-     * 收藏列表（「我的收藏」分组，永远置顶在左栏第二位，无收藏时该分组自动隐藏）。
+     * 程序化定位光标：只动高亮位置，不当作「用户移动」，也就不会触发切台。
+     * suppressCursor 由 onItemSelected 消费；若该次 setSelection 没产生回调（位置没变），
+     * 用 400ms 的兜底任务清掉标志，避免误吞用户以后的真实移动。
+     */
+    private fun silentSelect(pos: Int) {
+        val p = if (pos < 0) 0 else pos
+        selectedPos = p
+        suppressCursor = true
+        list.setSelection(p)
+        handler.removeCallbacks(clearSuppress)
+        handler.postDelayed(clearSuppress, 400)
+    }
+
+    /**
+     * 收藏列表（「我的收藏」分组，永远置顶在左栏第二位；空组也显示，只是列表为空集合，不放占位项）。
      *
      * ① 用归一化名匹配：v1.7 起频道名改成云端规范名（CCTV-1 综合），而历史收藏里存的是上游旧名
      *    （CCTV1综合 / CCTV1 综合高清），精确比较会让老收藏看起来「消失」，这里两者都算命中。
@@ -288,7 +333,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
 
     private fun hintText(): String {
         val line = if (curLine > 1) "  ｜  " + curLine + "线" else ""
-        return shown.size.toString() + " 个频道" + line + "   ｜   上下 选台 · OK 播放 · 长按OK 收藏 · ≪ 回导航 · ≫ 切线路 · 数字键 跳频道   ｜   菜单 呼出/长按 设置"
+        return shown.size.toString() + " 个频道" + line + "   ｜   上下 移动光标 · OK 播放 · 长按OK 收藏 · ≪ 回导航 · ≫ 切线路 · 数字键 跳频道   ｜   菜单 呼出/长按 设置"
     }
 
     private fun toggleFavAt(position: Int) {
@@ -296,15 +341,23 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         // 归一化匹配：兼容历史收藏里的旧频道名（上游名 → 云端规范名），并顺带清理重复的等价收藏
         val added = Prefs.toggleFavChannel(this, ch.name)
         showToast(if (added) "已收藏 " + ch.name else "已取消收藏 " + ch.name)
-        // 收藏集合变化 → 重建左栏：新增时「我的收藏」出现在「全部频道」下面第二位；最后一个被取消时整组自动隐藏
-        val wasFavGroup = curGroup == 1 && favGroupIndex > 0
+        // 收藏集合变化 → 重建左栏：「我的收藏」恒在 index 1（空也保留、不隐藏）
+        val wasFavGroup = curGroup == FAV_GROUP
         buildGroups()
-        if (wasFavGroup && favGroupIndex > 0 && shown.isNotEmpty()) playChannel(0)
+        if (wasFavGroup && shown.isNotEmpty()) {
+            playChannel(0)          // 被取消的项已从收藏组消失 → 自动顶到新的第一项
+            silentSelect(0)
+        } else if (wasFavGroup) {
+            navList.requestFocus()  // 取消掉最后一个收藏 → 收藏组变空，焦点交回左栏
+        }
     }
 
     private fun playChannel(pos: Int) {
         if (pos < 0 || pos >= shown.size) return
+        statusBox.visibility = View.GONE   // 任何切台动作先撤掉「暂时无法播放」等覆盖层
         curPos = pos
+        selectedPos = pos                   // 「正在播放」与光标保持一致（光标移动本身不触发这里）
+        playingName = shown[pos].name
         val ch = shown[pos]
         curLine = 1
         if (!ch.playable) {                     // 云端已标记「暂无线路」的占位频道：不切台、只提示
@@ -328,7 +381,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         }
         playChannel(n - 1)
         list.requestFocus()
-        list.setSelection(n - 1)
+        silentSelect(n - 1)     // 数字键直达：直接播放，并静默同步光标与 selectedPos
     }
 
     private fun showToast(msg: String) {
@@ -362,9 +415,9 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
                 if (v === navList) {
-                    if (shown.isEmpty()) return true
+                    if (shown.isEmpty()) return true   // 空组：别把焦点放进空列表
                     list.requestFocus()
-                    list.setSelection(if (curPos < 0) 0 else curPos)
+                    silentSelect(if (selectedPos < 0) 0 else selectedPos)
                     return true
                 }
                 if (v === list) {
@@ -397,6 +450,11 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
             return true
         }
         if (keyCode == KeyEvent.KEYCODE_BACK) {
+            // 分层退出：状态覆盖层 > 面板 > 交回系统
+            if (statusBox.visibility == View.VISIBLE) {
+                statusBox.visibility = View.GONE
+                return true
+            }
             if (panelVisible) {
                 setPanel(false)
                 return true
@@ -424,13 +482,22 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         return super.onKeyUp(keyCode, event)
     }
 
+    /**
+     * 上下键只移动光标：这里绝不切台，只记录光标位置（ListView 的 listSelector 跟随 selection，
+     * 因此更新 selectedPos 即完成高亮刷新）。
+     */
     override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
         scheduleHide()
-        if (position != curPos) playChannel(position)
+        if (suppressCursor) {   // 程序化定位（进组/数字键/同步）产生的回调，不当作用户移动
+            suppressCursor = false
+            handler.removeCallbacks(clearSuppress)
+        }
+        selectedPos = position
     }
 
+    /** OK 键 / 点击：唯一真正的播放入口。 */
     override fun onItemClick(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-        if (position != curPos) playChannel(position) else showToast("正在播放 " + shown[position].name)
+        if (position == curPos) showToast("正在播放 " + shown[position].name) else playChannel(position)
         scheduleHide()
     }
 
@@ -442,6 +509,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         if (panelVisible == visible) return
         panelVisible = visible
         if (visible) {
+            statusBox.visibility = View.GONE   // 菜单一定看得见：先撤掉可能残留的状态覆盖层
             menuRoot.visibility = View.VISIBLE
             if (menuRoot.translationX != 0f) {
                 menuRoot.animate().translationX(0f).setDuration(220).setInterpolator(DecelerateInterpolator()).start()
@@ -449,7 +517,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
             videoDim.visibility = View.VISIBLE
             videoDim.animate().alpha(0.38f).setDuration(220).start()
             playerView.animate().scaleX(0.985f).scaleY(0.985f).setDuration(220).start()
-            if (curPos >= 0 && list.adapter != null) list.requestFocus() else navList.requestFocus()
+            if (selectedPos >= 0 && list.adapter != null && shown.isNotEmpty()) list.requestFocus() else navList.requestFocus()
             scheduleHide()
         } else {
             menuRoot.animate().translationX(-menuW.toFloat()).setDuration(180)

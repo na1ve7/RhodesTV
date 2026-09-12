@@ -22,6 +22,32 @@
         android:visibility="gone" />
 
     <!-- 双栏菜单：左导航栏(贴边整块) + 频道卡(悬浮圆角) -->
+    <!-- 状态/加载覆盖层：必须声明在 menuRoot 之前，保证菜单、提示条、Toast 的层级永远高于它 -->
+    <LinearLayout
+        android:id="@+id/statusBox"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@color/bg">
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/loading"
+            android:textColor="@color/fg"
+            android:textSize="34sp" />
+
+        <TextView
+            android:id="@+id/tvHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:textColor="@color/dim"
+            android:textSize="20sp" />
+    </LinearLayout>
+
     <FrameLayout
         android:id="@+id/menuRoot"
         android:layout_width="@dimen/menu_width"
@@ -127,29 +153,4 @@
         android:textColor="@color/fg"
         android:textSize="18sp"
         android:visibility="gone" />
-
-    <LinearLayout
-        android:id="@+id/statusBox"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="@color/bg">
-
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/loading"
-            android:textColor="@color/fg"
-            android:textSize="34sp" />
-
-        <TextView
-            android:id="@+id/tvHint"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:textColor="@color/dim"
-            android:textSize="20sp" />
-    </LinearLayout>
 </FrameLayout>

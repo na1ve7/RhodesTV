@@ -96,7 +96,8 @@ class MainActivityUiTest {
         }
         probe("channels_loaded", count == 60, "list.adapter.count=" + count + " (expect 60)")
         val navCount = nav.adapter?.count ?: 0
-        probe("groups_loaded", navCount == 6, "navList.adapter.count=" + navCount + " (全部+央视频道+卫视频道+地方频道+其他频道+设置)")
+        // v1.9: 「我的收藏」恒常驻（空也显示）→ 左栏由 6 行变 7 行
+        probe("groups_loaded", navCount == 7, "navList.adapter.count=" + navCount + " (全部+收藏+央视频道+卫视频道+地方频道+其他频道+设置)")
 
         val navTexts = (0 until (nav.adapter?.count ?: 0))
             .map { i -> nav.adapter?.getView(i, null, nav)?.findViewById<TextView>(R.id.tvNavName)?.text?.toString() ?: "" }
@@ -113,12 +114,15 @@ class MainActivityUiTest {
         val firstRow = nav.adapter?.getView(1, null, nav)
         val navName1 = firstRow?.findViewById<TextView>(R.id.tvNavName)?.text?.toString() ?: ""
         probe("fav_group_pinned", navCount2 == 7 && navName1.contains("收藏"),
-            "navCount=" + navCount2 + " nav[1]='" + navName1 + "'")
+            "navCount=" + navCount2 + " nav[1]='" + navName1 + "' (收藏组恒在 index 1)")
 
         // 再长按一次 = 取消收藏
         lcl?.onItemLongClick(list, list.getChildAt(0), 0, 0L)
         shadowOf(Looper.getMainLooper()).idle()
         probe("long_click_idempotent_untoggle", !Prefs.isFav(ctx, "频道1"), "第二次长按后 isFav=" + Prefs.isFav(ctx, "频道1"))
+        // v1.9 需求1: 取消掉最后一个收藏后，「我的收藏」分组仍常驻（只是列表为空）
+        val navCount3 = nav.adapter?.count ?: 0
+        probe("fav_group_stays_when_empty", navCount3 == 7, "取消最后一个收藏后 navCount=" + navCount3 + " (收藏组不应消失)")
 
         // ---- 数字键多位数: 5 0 -> 第 50 台 ----
         a.onKeyDown(KeyEvent.KEYCODE_5, key(KeyEvent.KEYCODE_5))
@@ -162,6 +166,53 @@ class MainActivityUiTest {
         probe("menu_long_press_opens_settings", nxt != null && (nxt.component?.className ?: "").contains("SettingsActivity"),
             "nextStartedActivity=" + (nxt?.component?.className))
         a.onKeyUp(KeyEvent.KEYCODE_MENU, KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MENU))
+
+        // ---- v1.9 需求2: 上下移动光标不切台, 必须按 OK 才切 ----
+        // 观察量: playChannel() 会写 Prefs["last_ch"]; 纯移动光标绝不写它
+        val lastBefore = Prefs.get(ctx).getInt("last_ch", -1)
+        val chCount = list.adapter?.count ?: 0
+        val target = if (chCount > 5) 5 else 0
+        list.setSelection(target)
+        shadowOf(Looper.getMainLooper()).idle()
+        val lastAfterMove = Prefs.get(ctx).getInt("last_ch", -1)
+        probe("cursor_move_no_switch", lastAfterMove == lastBefore,
+            "移动光标到 $target 后 last_ch=$lastAfterMove (期望保持 $lastBefore, 不切台)")
+        list.onItemClickListener!!.onItemClick(list, null, target, target.toLong())
+        shadowOf(Looper.getMainLooper()).idle()
+        probe("ok_click_switches", Prefs.get(ctx).getInt("last_ch", -1) == target,
+            "按 OK 后 last_ch=" + Prefs.get(ctx).getInt("last_ch", -1) + " (期望 $target)")
+
+        // ---- v1.9 Bug 修复: 「暂时无法播放」覆盖层不得挡住菜单, 且切台/播放成功即撤层 ----
+        val statusOv = a.findViewById<View>(R.id.statusBox)
+        // 先把面板状态归零(上一段长按菜单后 panelVisible 可能仍为 true)
+        a.onKeyDown(KeyEvent.KEYCODE_BACK, key(KeyEvent.KEYCODE_BACK))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500))
+        statusOv.visibility = View.VISIBLE            // 模拟失败覆盖层残留
+        menuRoot.visibility = View.GONE
+        a.onKeyDown(KeyEvent.KEYCODE_MENU, key(KeyEvent.KEYCODE_MENU))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
+        a.onKeyUp(KeyEvent.KEYCODE_MENU, KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MENU))
+        shadowOf(Looper.getMainLooper()).idle()
+        probe("error_overlay_menu_reachable",
+            menuRoot.visibility == View.VISIBLE && statusOv.visibility == View.GONE,
+            "menuRoot=" + menuRoot.visibility + " statusBox=" + statusOv.visibility)
+        a.onKeyDown(KeyEvent.KEYCODE_BACK, key(KeyEvent.KEYCODE_BACK))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500))
+        statusOv.visibility = View.VISIBLE            // 再模拟一次残留
+        val t2 = if (chCount > 2) 2 else 0
+        list.onItemClickListener!!.onItemClick(list, null, t2, t2.toLong())
+        shadowOf(Looper.getMainLooper()).idle()
+        probe("error_overlay_cleared_on_switch", statusOv.visibility == View.GONE,
+            "切台后 statusBox=" + statusOv.visibility + " (期望 GONE)")
+
+        // ---- v1.9 需求1: 空收藏组右栏留白(无占位项), 左栏收藏组仍常驻 ----
+        nav.onItemSelectedListener!!.onItemSelected(nav, null, 0, 0L)   // 确保先不在收藏组
+        nav.onItemSelectedListener!!.onItemSelected(nav, null, 1, 1L)   // 显式进入收藏组
+        shadowOf(Looper.getMainLooper()).idle()
+        val favRows = list.adapter?.count ?: -1
+        val navCntAfter = nav.adapter?.count ?: 0
+        probe("empty_fav_group_blank", favRows == 0 && navCntAfter == 7,
+            "收藏组 channelCount=$favRows (期望 0, 无占位项) navCount=$navCntAfter (期望 7)")
 
         srv.close()
         // 收尾: 销毁 Activity 并清空状态, 避免污染同 JVM 的其他测试类
