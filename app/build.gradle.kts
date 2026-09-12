@@ -13,8 +13,8 @@ android {
         applicationId = "com.rhodes.tv"
         minSdk = 21
         targetSdk = 34
-        versionCode = 9
-        versionName = "1.8"
+        versionCode = 10
+        versionName = "1.8.1"
     }
 
     signingConfigs {

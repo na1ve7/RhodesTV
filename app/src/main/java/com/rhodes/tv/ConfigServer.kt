@@ -384,7 +384,6 @@ class ConfigServer(private val ctx: Context) {
 
     private fun channelsJson(q: HashMap<String, String>): String {
         val all = ChannelStore.load(ctx)
-        val favs = Prefs.favSet(ctx)
         val g = q["group"]
         val kw = q["q"]?.lowercase()
         val onlyFav = q["fav"] == "1"
@@ -395,7 +394,9 @@ class ConfigServer(private val ctx: Context) {
         for ((i, ch) in all.withIndex()) {
             val cg = groupOf(ch)
             if (!g.isNullOrBlank() && cg != g) continue
-            if (onlyFav && !favs.contains(ch.name)) continue
+            // 收藏判断走归一化匹配：历史收藏里可能是上游旧频道名（v1.7 起频道名改用云端规范名）
+            val isFav = Prefs.isFavChannel(ctx, ch.name)
+            if (onlyFav && !isFav) continue
             if (kw != null && !ch.name.lowercase().contains(kw)) continue
             total++
             if (total <= offset) continue
@@ -407,7 +408,7 @@ class ConfigServer(private val ctx: Context) {
             o.put("key", ch.key)
             o.put("chno", ch.chno ?: 0)
             o.put("dead", !ch.playable)
-            o.put("fav", favs.contains(ch.name))
+            o.put("fav", isFav)
             o.put("lines", ch.lines.size)
             arr.put(o)
         }
@@ -439,13 +440,13 @@ class ConfigServer(private val ctx: Context) {
             return JSONObject().put("ok", false).put("error", "missing name").toString()
         }
         val action = q["action"] ?: "toggle"
-        val has = Prefs.favSet(ctx).contains(name)
+        val has = Prefs.isFavChannel(ctx, name)
         val want = when (action) {
             "add" -> true
             "remove", "del", "delete" -> false
             else -> !has
         }
-        if (want != has) Prefs.toggleFav(ctx, name)
+        if (want != has) Prefs.toggleFavChannel(ctx, name)
         val o = JSONObject()
         o.put("ok", true)
         o.put("name", name)

@@ -106,4 +106,21 @@ class GroupRulesTest {
         assertEquals(listOf(1, 16, 18), sorted.map { it.chno })
         assertEquals("CCTV-1 综合", sorted[0].name)
     }
+
+    /** v1.8 修复回归：收藏必须兼容历史旧频道名，否则老收藏会「消失」在收藏分组里 */
+    @Test
+    fun v18_fav_same_normalizes_legacy_names() {
+        // 上游旧名 → 云端规范名
+        assertEquals(true, GroupRules.favSame("CCTV-1 综合", "CCTV1综合"))
+        assertEquals(true, GroupRules.favSame("CCTV-1 综合", "CCTV1 综合高清"))
+        assertEquals(true, GroupRules.favSame("CCTV-1 综合", "CCTV-1 综合 (1080p)"))
+        assertEquals(true, GroupRules.favSame("CCTV-5体育", "cctv5 体育 高清"))
+        assertEquals(true, GroupRules.favSame("湖南卫视", "湖南卫视"))
+        // 不同频道绝不能被归一化成同一个
+        assertEquals(false, GroupRules.favSame("CCTV-1 综合", "CCTV-2 财经"))
+        assertEquals(false, GroupRules.favSame("CCTV-5体育", "CCTV-5+ 体育赛事"))
+        assertEquals(false, GroupRules.favSame("湖南卫视", "湖南经视"))
+        // 关键回归：v1.6 时代存的旧名要能被 v1.8 的规范名命中
+        assertEquals(GroupRules.favNorm("CCTV-1 综合"), GroupRules.favNorm("CCTV1 综合高清"))
+    }
 }

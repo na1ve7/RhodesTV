@@ -954,6 +954,24 @@ object GroupRules {
         return s.replace(Regex("\\s+"), "").trim().lowercase()
     }
 
+    /**
+     * 收藏匹配：同一频道判断。
+     * 为什么要归一化：v1.7 起频道名来自云端规范库（如「CCTV-1 综合」），
+     * 而历史收藏里存的可能是上游旧名（如「CCTV1综合」/「CCTV1 综合高清」），
+     * 精确比较会让老收藏「消失」，所以这里同时比较归一化名。
+     */
+    fun favSame(a: String, b: String): Boolean =
+        a == b || normName(a) == normName(b) || favNorm(a) == favNorm(b)
+
+    /** 尾部画质词（高清/超清/HD/4K…）：只在收藏匹配时剥离，不动频道合并键 normName */
+    private val TAIL_QUALITY = Regex(
+        "[\\s\\-_·]*(超高清|高清|超清|标清|蓝光|原画|流畅|4K|8K|H265|H264|HEVC|FHD|HD|SD)+$",
+        RegexOption.IGNORE_CASE
+    )
+
+    /** 收藏用归一化名：在 normName 基础上再剥掉「CCTV1 综合高清」这类尾部画质词 */
+    fun favNorm(n: String): String = TAIL_QUALITY.replace(normName(n), "")
+
     /** 展示名: 只去掉画质/离线标记 */
     fun cleanName(n: String): String {
         val s = QUALITY.replace(n, "").replace("  ", " ").trim()

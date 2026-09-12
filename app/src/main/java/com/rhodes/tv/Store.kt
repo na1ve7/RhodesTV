@@ -51,6 +51,25 @@ object Prefs {
 
     fun isFav(c: Context, name: String): Boolean = favSet(c).contains(name)
 
+    /** 该频道是否已收藏（兼容历史收藏里的旧频道名） */
+    fun isFavChannel(c: Context, name: String): Boolean {
+        val s = favSet(c)
+        return s.contains(name) || s.any { GroupRules.favSame(it, name) }
+    }
+
+    /** 收藏 / 取消收藏（按归一化名匹配历史记录），返回 true=已收藏 */
+    fun toggleFavChannel(c: Context, name: String): Boolean {
+        val s = favSet(c)
+        val hit = s.firstOrNull { GroupRules.favSame(it, name) }
+        val added = if (hit != null) {
+            s.remove(hit); false
+        } else {
+            s.add(name); true
+        }
+        get(c).edit().putStringSet(KEY_FAV, s).apply()
+        return added
+    }
+
     /** 切换收藏，返回 true=已收藏 / false=已取消 */
     fun toggleFav(c: Context, name: String): Boolean {
         val s = favSet(c)

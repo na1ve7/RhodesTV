@@ -242,11 +242,10 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
     private fun selectGroup(index: Int) {
         if (index < 0 || index >= groupNames.size) return
         curGroup = index
-        val favs = Prefs.favSet(this)
         val hidden = Prefs.hiddenGroups(this)
         shown = when {
             index == 0 -> all.filter { !hidden.contains(it.group) }
-            favGroupIndex > 0 && index == 1 -> all.filter { favs.contains(it.name) }
+            favGroupIndex > 0 && index == 1 -> favChannels()
             else -> all.filter { it.group == groupNames[index] }
         }
         // 组内排序：分组顺序 → 频道号（CCTV-1≈1…CCTV-5+≈18、卫视 101+）→ 名称
@@ -261,6 +260,30 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         if (shown.isNotEmpty()) list.setSelection(0)
     }
 
+    /**
+     * 收藏列表（「我的收藏」分组，永远置顶在左栏第二位，无收藏时该分组自动隐藏）。
+     *
+     * ① 用归一化名匹配：v1.7 起频道名改成云端规范名（CCTV-1 综合），而历史收藏里存的是上游旧名
+     *    （CCTV1综合 / CCTV1 综合高清），精确比较会让老收藏看起来「消失」，这里两者都算命中。
+     * ② 已经从源里消失的收藏项（改名/下架）用占位频道保留并灰显，方便长按取消，不静默丢数据。
+     */
+    private fun favChannels(): List<Channel> {
+        val favs = Prefs.favSet(this)
+        if (favs.isEmpty()) return emptyList()
+        val hit = all.filter { c -> favs.any { GroupRules.favSame(it, c.name) } }
+        val got = hit.map { GroupRules.normName(it.name) }.toHashSet()
+        val ghosts = favs.filter { GroupRules.normName(it) !in got }.map {
+            Channel(
+                key = "fav:" + GroupRules.normName(it),
+                name = it,
+                group = Prefs.FAV_GROUP,
+                dead = true,
+                lines = mutableListOf(StreamLine(Channel.DEAD_SCHEME + it))
+            )
+        }
+        return hit + ghosts
+    }
+
     private fun groupTitle(): String = groupNames.getOrNull(curGroup) ?: "全部频道"
 
     private fun hintText(): String {
@@ -270,15 +293,13 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
 
     private fun toggleFavAt(position: Int) {
         val ch = shown.getOrNull(position) ?: return
-        val added = Prefs.toggleFav(this, ch.name)
+        // 归一化匹配：兼容历史收藏里的旧频道名（上游名 → 云端规范名），并顺带清理重复的等价收藏
+        val added = Prefs.toggleFavChannel(this, ch.name)
         showToast(if (added) "已收藏 " + ch.name else "已取消收藏 " + ch.name)
-        if (favGroupIndex > 0 && curGroup == 1) {
-            selectGroup(1)
-            if (shown.isNotEmpty()) playChannel(0)
-        } else {
-            (list.adapter as? BaseAdapter)?.notifyDataSetChanged()
-            if (added && favGroupIndex <= 0) buildGroups()
-        }
+        // 收藏集合变化 → 重建左栏：新增时「我的收藏」出现在「全部频道」下面第二位；最后一个被取消时整组自动隐藏
+        val wasFavGroup = curGroup == 1 && favGroupIndex > 0
+        buildGroups()
+        if (wasFavGroup && favGroupIndex > 0 && shown.isNotEmpty()) playChannel(0)
     }
 
     private fun playChannel(pos: Int) {

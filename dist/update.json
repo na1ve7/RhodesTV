@@ -1,12 +1,12 @@
 {
-  "versionCode": 9,
-  "versionName": "1.8",
+  "versionCode": 10,
+  "versionName": "1.8.1",
   "apkUrl": "https://gh-proxy.com/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
   "mirrors": [
     "https://ghfast.top/https://raw.githubusercontent.com/na1ve7/RhodesTV/main/dist/RhodesTV.apk",
     "https://cdn.jsdelivr.net/gh/na1ve7/RhodesTV@main/dist/RhodesTV.apk"
   ],
-  "sha256": "b78ae026be2584d3744db98fae322a549a800d40b4d4feaf4e090e4698227d16",
-  "size": 5191644,
-  "note": "v1.8 稳定性与运维大修：① 频道不再因上游 tvg-id 写法不同而重复/分裂，同一频道自动归并多条线路；② 央视频道严格按 CCTV-1→CCTV-18 → CCTV-5+ → CCTV-4K/8K → 央视台球/风云足球/怀旧剧场 等顺序排列，体育频道补全（广东/五星/劲爆/纬来/睛彩/天元/武术/Trace/DAZN/ELEVEN 等 30+ 个）；③ 云端源扩到 11 个上游（含 IPv6 源），任一上游被墙自动走镜像，体检覆盖 3000+ 候选线路；④ 当前无可用线路的频道不再消失，而是灰显占位保持列表顺序，过一会儿点『重体检』即可复活；⑤ 新增手机端『频道维护』：用浏览器打开 App 设置页的网址（手机与电视同一 WiFi），搜索频道→点『重体检』→自动触发 GitHub 云端重测该频道并通知电视端立刻刷新，从此单个卡顿频道几分钟内换源，不用等 6 小时全量体检。"
+  "sha256": "a0331188c5a84b7074be0e4ea717fd410601cd4d82a831e6b4ccc71001b1ba4a",
+  "size": 5193212,
+  "note": "v1.8.1 修复收藏丢失：v1.7 起频道名改用云端规范名（CCTV-1 综合），而历史收藏里存的是上游旧名（CCTV1 综合高清），旧版用精确字符串比较导致「我的收藏」里空无一物。现在收藏改为归一化匹配（忽略 CCTV- / 高清 / (1080p) 等写法差异），老收藏自动恢复；已改名/下架的收藏也不会被静默丢弃，而是灰显保留、长按可取消。「我的收藏」固定在左栏第二位（紧跟「全部频道」）置顶，无收藏时整组自动隐藏。   ｜  v1.8 主要内容：频道灰显占位不再消失 + 央视/体育严格排序 + 11 个上游源 + 手机端「频道维护」单频道实时换源。"
 }
