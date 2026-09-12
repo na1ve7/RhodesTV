@@ -28,7 +28,53 @@ object Prefs {
     const val DEFAULT_UA =
         "Mozilla/5.0 (Linux; Android 12; TV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
-    fun get(c: Context): SharedPreferences = c.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+    /** 最近一次调用 prefs 时记下的 applicationContext（给没有 Context 参数的全局单例读 DNS 配置用） */
+    @Volatile
+    private var appCtx: Context? = null
+
+    fun appContext(): Context? = appCtx
+
+    // ---------- 网络 / DoH ----------
+
+    const val KEY_DOH_ENABLED = "doh_enabled"
+    const val KEY_DOH_ENDPOINT = "doh_endpoint"
+
+    /** 是否启用 DoH（默认开启） */
+    fun dohEnabled(c: Context): Boolean = get(c).getBoolean(KEY_DOH_ENABLED, true)
+
+    fun setDohEnabled(c: Context, v: Boolean) =
+        get(c).edit().putBoolean(KEY_DOH_ENABLED, v).apply()
+
+    /** DoH 端点名（doh.pub / alidns / 360，默认 doh.pub） */
+    fun dohEndpoint(c: Context): String =
+        get(c).getString(KEY_DOH_ENDPOINT, Doh.DEFAULT_ENDPOINT)
+            ?.trim()?.takeUnless { it.isEmpty() } ?: Doh.DEFAULT_ENDPOINT
+
+    fun setDohEndpoint(c: Context, v: String) =
+        get(c).edit().putString(KEY_DOH_ENDPOINT, v.trim()).apply()
+
+    // ---------- IPv6 实测结果缓存 ----------
+
+    const val KEY_V6_OK = "v6_ok"
+    const val KEY_V6_AT = "v6_checked_at"
+
+    /** 最近一次 IPv6 实测结果；配合 [v6CheckedAt]（0 = 从未检测）判断是否有效 */
+    fun v6Ok(c: Context): Boolean = get(c).getBoolean(KEY_V6_OK, false)
+
+    /** 最近一次 IPv6 实测时间戳（毫秒）；0 表示从未检测 */
+    fun v6CheckedAt(c: Context): Long = get(c).getLong(KEY_V6_AT, 0L)
+
+    /** 写入 IPv6 实测结果并刷新时间戳 */
+    fun setV6(c: Context, ok: Boolean) =
+        get(c).edit()
+            .putBoolean(KEY_V6_OK, ok)
+            .putLong(KEY_V6_AT, System.currentTimeMillis())
+            .apply()
+
+    fun get(c: Context): SharedPreferences {
+        appCtx = c.applicationContext
+        return c.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+    }
 
     fun list(c: Context, key: String): MutableList<String> =
         get(c).getString(key, "")!!.split('\n').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
@@ -158,6 +204,7 @@ object ChannelStore {
             .followRedirects(true)
             .followSslRedirects(true)
             .retryOnConnectionFailure(true)
+            .dns(Doh.dns(Prefs.appContext()))
             .build()
     }
 

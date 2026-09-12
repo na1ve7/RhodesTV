@@ -115,6 +115,85 @@
                 android:textSize="22sp" />
         </LinearLayout>
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="26dp"
+            android:text="网络（DNS over HTTPS，防 DNS 污染/劫持）"
+            android:textColor="@color/accent"
+            android:textSize="22sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Switch
+                android:id="@+id/swDoh"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="启用 DoH"
+                android:textColor="@color/fg"
+                android:textSize="20sp" />
+
+            <RadioGroup
+                android:id="@+id/rgDoh"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rbDohPub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="doh.pub"
+                    android:textColor="@color/fg"
+                    android:textSize="20sp" />
+
+                <RadioButton
+                    android:id="@+id/rbDohAli"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="alidns"
+                    android:textColor="@color/fg"
+                    android:textSize="20sp" />
+
+                <RadioButton
+                    android:id="@+id/rbDoh360"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="360"
+                    android:textColor="@color/fg"
+                    android:textSize="20sp" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvDohState"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/dim"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvV6State"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:textColor="@color/dim"
+            android:textSize="20sp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

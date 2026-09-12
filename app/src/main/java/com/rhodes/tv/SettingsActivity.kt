@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.RadioGroup
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
@@ -20,6 +22,10 @@ class SettingsActivity : Activity() {
     private lateinit var etUa: EditText
     private lateinit var tvState: TextView
     private lateinit var tvIp: TextView
+    private lateinit var swDoh: Switch
+    private lateinit var rgDoh: RadioGroup
+    private lateinit var tvDohState: TextView
+    private lateinit var tvV6State: TextView
     private lateinit var server: ConfigServer
     private lateinit var tvVersion: TextView
     private var pending: UpdateInfo? = null
@@ -34,6 +40,29 @@ class SettingsActivity : Activity() {
         etUa = findViewById(R.id.etUa)
         tvState = findViewById(R.id.tvState)
         tvIp = findViewById(R.id.tvLocalIp)
+
+        // ---------- 网络 / DoH ----------
+        swDoh = findViewById(R.id.swDoh)
+        rgDoh = findViewById(R.id.rgDoh)
+        tvDohState = findViewById(R.id.tvDohState)
+        swDoh.isChecked = Prefs.dohEnabled(this)
+        rgDoh.check(radioIdOf(Prefs.dohEndpoint(this)))
+        swDoh.setOnCheckedChangeListener { _, _ ->
+            Prefs.setDohEnabled(this, swDoh.isChecked)
+            refreshDohUi()
+            Toast.makeText(this, "已保存，重启 App 后生效", Toast.LENGTH_SHORT).show()
+        }
+        rgDoh.setOnCheckedChangeListener { _, id ->
+            Prefs.setDohEndpoint(this, endpointOf(id))
+            refreshDohUi()
+            Toast.makeText(this, "已保存，重启 App 后生效", Toast.LENGTH_SHORT).show()
+        }
+        refreshDohUi()
+
+        // ---------- 网络 / IPv6 ----------
+        tvV6State = findViewById(R.id.tvV6State)
+        tvV6State.setOnClickListener { retestV6() }
+        refreshV6Ui()
 
         etSubs.setText(Prefs.list(this, Prefs.KEY_SUBS).joinToString("\n"))
         etEpg.setText(Prefs.list(this, Prefs.KEY_EPG).joinToString("\n"))
@@ -82,6 +111,52 @@ class SettingsActivity : Activity() {
         Prefs.save(this, Prefs.KEY_SUBS, etSubs.text.toString().split('\n').map { it.trim() }.filter { it.isNotEmpty() })
         Prefs.save(this, Prefs.KEY_EPG, etEpg.text.toString().split('\n').map { it.trim() }.filter { it.isNotEmpty() })
         Prefs.get(this).edit().putString(Prefs.KEY_UA, etUa.text.toString().trim()).apply()
+        Prefs.setDohEnabled(this, swDoh.isChecked)
+        Prefs.setDohEndpoint(this, endpointOf(rgDoh.checkedRadioButtonId))
+        refreshDohUi()
+    }
+
+    /** 端点名 → 单选按钮 id（未知名字回落 doh.pub） */
+    private fun radioIdOf(name: String): Int = when (name) {
+        "alidns" -> R.id.rbDohAli
+        "360" -> R.id.rbDoh360
+        else -> R.id.rbDohPub
+    }
+
+    /** 单选按钮 id → 端点名 */
+    private fun endpointOf(id: Int): String = when (id) {
+        R.id.rbDohAli -> "alidns"
+        R.id.rbDoh360 -> "360"
+        else -> Doh.DEFAULT_ENDPOINT
+    }
+
+    /** 刷新「网络」区状态文案。客户端是 lazy 单例，改动要重启 App 才生效 */
+    private fun refreshDohUi() {
+        val on = swDoh.isChecked
+        for (i in 0 until rgDoh.childCount) rgDoh.getChildAt(i).isEnabled = on
+        tvDohState.text = if (on) {
+            "DNS：DoH(" + Prefs.dohEndpoint(this) + ")，重启 App 后生效"
+        } else {
+            "DNS：系统默认，重启 App 后生效"
+        }
+    }
+
+    /** 刷新「IPv6 网络」状态文案：可用 / 不可用 / 未知 */
+    private fun refreshV6Ui() {
+        val txt = when {
+            Prefs.v6CheckedAt(this) <= 0L -> "未知"
+            Prefs.v6Ok(this) -> "可用"
+            else -> "不可用"
+        }
+        tvV6State.text = "IPv6 网络：$txt（点击重测）"
+    }
+
+    /** 点击状态行 → 后台重测并刷新文案 */
+    private fun retestV6() {
+        tvV6State.text = "IPv6 网络：检测中…"
+        NetInfo.refreshAsync(this) { ok ->
+            tvV6State.text = "IPv6 网络：" + (if (ok) "可用" else "不可用") + "（点击重测）"
+        }
     }
 
     private fun refresh(title: String) {

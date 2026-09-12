@@ -106,6 +106,9 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener, AdapterView
         menuW = resources.getDimensionPixelSize(R.dimen.menu_width)
         menuRoot.translationX = -menuW.toFloat()
 
+        // 启动即后台实测本机 IPv6（结果缓存 10 分钟，供 PlayerController 过滤 v6 线路）
+        NetInfo.refreshAsync(this)
+
         list.setOnItemSelectedListener(this)
         list.setOnItemClickListener(this)
         list.setOnItemLongClickListener { _, _, position, _ ->

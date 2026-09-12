@@ -61,6 +61,7 @@ object Updater {
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
         .followRedirects(true)
+        .dns(Doh.dns(Prefs.appContext()))
         .build()
 
     fun urls(c: Context): List<String> = Prefs.list(c, KEY_UPDATE_URLS).ifEmpty { DEFAULT_URLS }

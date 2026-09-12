@@ -111,7 +111,14 @@ class PlayerController(private val ctx: Context, private val view: PlayerView) {
         failed = 0
         retryRound = 0
         // 云端下发的「暂无线路」占位条目（url = dead://KEY）不参与播放尝试
-        val usable = ch.lines.indices.filter { !ch.lines[it].url.startsWith(Channel.DEAD_SCHEME) }
+        val base = ch.lines.indices.filter { !ch.lines[it].url.startsWith(Channel.DEAD_SCHEME) }
+        // IPv6 过滤：本机实测确认无 v6 时剔除 v6 字面量线路；若剔空则保留原列表（宁可试也不无台可播）。
+        // 判据抽到 NetInfo.indicesToKeep（纯函数，可单测）；未检测 / 检测为可用 → 行为与 v1.9 完全一致。
+        val usable = if (NetInfo.ipv6AvailableCached(ctx)) {
+            base
+        } else {
+            NetInfo.indicesToKeep(base.map { ch.lines[it].url }).map { base[it] }
+        }
         val n = usable.size
         if (n == 0) {
             order = emptyList()
